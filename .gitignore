@@ -1,6 +1,13 @@
 # .vscode
+.vscode
 .vscode/*
 
 # .o
 *.o
 
+# .elf
+*.elf
+
+# test
+test
+test/*

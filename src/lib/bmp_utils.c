@@ -1,5 +1,3 @@
-// This is an ADT for managing BMP files.
-
 #include "include/bmp_utils.h"
 
 // Create a new BMP file
@@ -108,4 +106,16 @@ bmp_file* bmp_load(const char* filename) {
 
     fclose(file);
     return bmp;
+}
+
+/**
+ * Returns the size of a file
+ * @param file The file to get the size of
+ * @return The size of the file
+ */
+size_t get_file_size(FILE* file) {
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    return size;
 }
