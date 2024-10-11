@@ -82,13 +82,13 @@ const EVP_CIPHER *get_cipher(encryption alg, mode m) {
 
     switch (alg) {
         case AES128:
-            return aes_ciphers[m];
+            return aes_ciphers[m]();
         case AES192:
-            return aes_ciphers[4 + m];
+            return aes_ciphers[4 + m]();
         case AES256:
-            return aes_ciphers[8 + m];
+            return aes_ciphers[8 + m]();
         case DES3:
-            return des3_ciphers[m];
+            return des3_ciphers[m]();
         default:
             fprintf(stderr, "Unsupported mode or algorithm\n");
             return NULL;

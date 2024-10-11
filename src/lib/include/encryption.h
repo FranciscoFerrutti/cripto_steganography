@@ -5,8 +5,8 @@
 
 #include "common_libs.h"
 
-typedef enum { AES128, AES192, AES256, DES3 } encryption;
-typedef enum { ECB, CBC, CFB, OFB } mode;
+typedef enum { ENC_UNDEFINED, AES128, AES192, AES256, DES3 } encryption;
+typedef enum { MODE_UNDEFINED, ECB, CBC, CFB, OFB } mode;
 
 void encrypt(FILE *in, uint8_t *out, size_t size, const char *password, encryption a, mode m);
 void decrypt(FILE *in, uint8_t *out, size_t size, const char *password, encryption a, mode m);

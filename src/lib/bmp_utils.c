@@ -1,111 +1,115 @@
 #include "include/bmp_utils.h"
 
-// Create a new BMP file
-bmp_file* bmp_create(const int width, const int height) {
-    bmp_file* bmp = malloc(sizeof(struct bmp_file));
-    if (bmp == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        return NULL;
-    }
-
-    // Initialize the BMP file to avoid undefined behavior
-    memset(bmp, 0, sizeof(struct bmp_file));
-
-    // Initialize the BMP file header
-    bmp->header.signature = 0x4D42;  // "BM" in ASCII
-    bmp->header.size = sizeof(bmp_header) + sizeof(info_header) + height * width * sizeof(pixel);
+int init_bmp(bmp_file* bmp, int width, int height) {
+    bmp->header.signature = 0x4D42;  // BM
+    bmp->header.size      = 0;
     bmp->header.reserved1 = 0;
     bmp->header.reserved2 = 0;
-    bmp->header.offset    = sizeof(bmp_header) + sizeof(info_header);
+    bmp->header.offset    = 54;
 
-    // Initialize the DIB header
-    bmp->info.size            = sizeof(info_header);
+    bmp->info.size            = 40;
     bmp->info.width           = width;
     bmp->info.height          = height;
     bmp->info.planes          = 1;
     bmp->info.bits            = 24;
     bmp->info.compression     = 0;
-    bmp->info.imagesize       = height * width * sizeof(pixel);
-    bmp->info.xresolution     = 0;
-    bmp->info.yresolution     = 0;
+    bmp->info.imagesize       = width * height * 3;
+    bmp->info.xresolution     = 2835;
+    bmp->info.yresolution     = 2835;
     bmp->info.ncolors         = 0;
     bmp->info.importantcolors = 0;
 
-    // Allocate memory for the pixel data
     bmp->data = malloc(height * sizeof(pixel*));
     if (bmp->data == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
-        free(bmp);
-        return NULL;
+        return 0;
     }
 
     for (int i = 0; i < height; i++) {
         bmp->data[i] = malloc(width * sizeof(pixel));
         if (bmp->data[i] == NULL) {
             fprintf(stderr, "Memory allocation failed\n");
-            for (int j = 0; j < i; j++) {
-                free(bmp->data[j]);
-            }
-            free(bmp->data);
-            free(bmp);
-            return NULL;
+            return 0;
         }
     }
 
-    return bmp;
+    return 1;
 }
 
-// Load a BMP file
-bmp_file* bmp_load(const char* filename) {
-    FILE* file = fopen(filename, "rb");
-    if (file == NULL) {
-        fprintf(stderr, "Failed to open file\n");
-        return NULL;
+int write_bmp(FILE* file, bmp_file* bmp) {
+    // Write the BMP file header
+    fwrite(&bmp->header.signature, 2, 1, file);
+    fwrite(&bmp->header.size, 4, 1, file);
+    fwrite(&bmp->header.reserved1, 2, 1, file);
+    fwrite(&bmp->header.reserved2, 2, 1, file);
+    fwrite(&bmp->header.offset, 4, 1, file);
+
+    // Write the DIB header
+    fwrite(&bmp->info.size, 4, 1, file);
+    fwrite(&bmp->info.width, 4, 1, file);
+    fwrite(&bmp->info.height, 4, 1, file);
+    fwrite(&bmp->info.planes, 2, 1, file);
+    fwrite(&bmp->info.bits, 2, 1, file);
+    fwrite(&bmp->info.compression, 4, 1, file);
+    fwrite(&bmp->info.imagesize, 4, 1, file);
+    fwrite(&bmp->info.xresolution, 4, 1, file);
+    fwrite(&bmp->info.yresolution, 4, 1, file);
+    fwrite(&bmp->info.ncolors, 4, 1, file);
+    fwrite(&bmp->info.importantcolors, 4, 1, file);
+
+    // Write the pixel data
+    for (int i = 0; i < bmp->info.height; i++) {
+        for (int j = 0; j < bmp->info.width; j++) {
+            fwrite(&bmp->data[i][j], sizeof(pixel), 1, file);
+        }
     }
 
-    bmp_file* bmp = malloc(sizeof(struct bmp_file));
-    if (bmp == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        fclose(file);
-        return NULL;
-    }
+    return 1;
+}
 
+int read_bmp(FILE* file, bmp_file* bmp) {
     // Read the BMP file header
-    fread(&bmp->header, sizeof(bmp_header), 1, file);
+    fread(&bmp->header.signature, 2, 1, file);
+    fread(&bmp->header.size, 4, 1, file);
+    fread(&bmp->header.reserved1, 2, 1, file);
+    fread(&bmp->header.reserved2, 2, 1, file);
+    fread(&bmp->header.offset, 4, 1, file);
 
     // Read the DIB header
-    fread(&bmp->info, sizeof(info_header), 1, file);
+    fread(&bmp->info.size, 4, 1, file);
+    fread(&bmp->info.width, 4, 1, file);
+    fread(&bmp->info.height, 4, 1, file);
+    fread(&bmp->info.planes, 2, 1, file);
+    fread(&bmp->info.bits, 2, 1, file);
+    fread(&bmp->info.compression, 4, 1, file);
+    fread(&bmp->info.imagesize, 4, 1, file);
+    fread(&bmp->info.xresolution, 4, 1, file);
+    fread(&bmp->info.yresolution, 4, 1, file);
+    fread(&bmp->info.ncolors, 4, 1, file);
+    fread(&bmp->info.importantcolors, 4, 1, file);
 
-    // Allocate memory for the pixel data
+    // Read the pixel data
     bmp->data = malloc(bmp->info.height * sizeof(pixel*));
     if (bmp->data == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
-        free(bmp);
-        fclose(file);
-        return NULL;
+        return 0;
     }
 
     for (int i = 0; i < bmp->info.height; i++) {
         bmp->data[i] = malloc(bmp->info.width * sizeof(pixel));
         if (bmp->data[i] == NULL) {
             fprintf(stderr, "Memory allocation failed\n");
-            for (int j = 0; j < i; j++) {
-                free(bmp->data[j]);
-            }
-            free(bmp->data);
-            free(bmp);
-            fclose(file);
-            return NULL;
+            return 0;
         }
     }
 
-    // Read the pixel data
-    for (int i = bmp->info.height - 1; i >= 0; i--) {
-        fread(bmp->data[i], sizeof(pixel), bmp->info.width, file);
+    for (int i = 0; i < bmp->info.height; i++) {
+        for (int j = 0; j < bmp->info.width; j++) {
+            fread(&bmp->data[i][j], sizeof(pixel), 1, file);
+        }
     }
 
-    fclose(file);
-    return bmp;
+    return 1;
 }
 
 /**

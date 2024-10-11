@@ -46,6 +46,11 @@ typedef struct bmp_file
     pixel**     data;    // 2D array of pixel data
 } bmp_file;
 
+// i need functions init_bmp, write_bmp and read_bmp
+int init_bmp(bmp_file* bmp, int width, int height);
+int write_bmp(FILE* file, bmp_file* bmp);
+int read_bmp(FILE* file, bmp_file* bmp);
+
 size_t get_file_size(FILE* file);
 
 #endif

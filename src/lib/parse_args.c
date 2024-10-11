@@ -130,8 +130,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->a = DES3;
                 }
                 else {
-                    print_error("Invalid a");
-                    exit(1);
+                    args->a = ENC_UNDEFINED;
                 }
                 i++;
             }
@@ -155,8 +154,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->m = CBC;
                 }
                 else {
-                    print_error("Invalid m");
-                    exit(1);
+                    args->m = MODE_UNDEFINED;
                 }
                 i++;
             }

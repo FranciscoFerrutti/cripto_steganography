@@ -41,7 +41,7 @@ void embed(args args, bmp_file *bmp) {
             return;
         }
         // Initialize the BMP file with default values
-        init_bmp(bmp);
+        init_bmp(bmp, 256, 256);
         write_bmp(carrier, bmp);
         fclose(carrier);
         // Reopen the carrier file for reading
@@ -70,10 +70,10 @@ void embed(args args, bmp_file *bmp) {
         size_t   file_size = get_file_size(in);
         encrypted_data     = malloc(file_size);
 
-        if (args.a == NULL) {
+        if (args.a == ENC_UNDEFINED) {
             args.a = AES128;  // defaulting to aes128
         }
-        if (args.m == NULL) {
+        if (args.m == MODE_UNDEFINED) {
             args.m = CBC;  // defaulting to cbc
         }
 

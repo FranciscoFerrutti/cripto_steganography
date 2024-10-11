@@ -1,4 +1,5 @@
 #include "lib/include/common_libs.h"
+#include "lib/include/embed.h"
 #include "lib/include/parse_args.h"
 
 int main(const int argc, const char* argv[]) {
@@ -12,6 +13,18 @@ int main(const int argc, const char* argv[]) {
     memset(args, 0, sizeof(struct args));
 
     parse_args(argc, argv, args);
+
+    // Check if the action is embed or extract
+    if (args->action == EMBED) {
+        bmp_file bmp;
+        embed(*args, &bmp);
+    }
+    else if (args->action == EXTRACT) {
+        // extract(args);
+    }
+    else {
+        fprintf(stderr, "Error: Invalid action\n");
+    }
 
     free(args);  // Free the allocated memory
     return 0;
