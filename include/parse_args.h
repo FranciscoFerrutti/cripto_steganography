@@ -8,7 +8,7 @@
 #include "steg.h"
 // struct for arguments
 
-typedef enum { EMBED, EXTRACT } action;
+typedef enum { NONE, EMBED, EXTRACT } action;
 
 typedef struct args
 {
@@ -22,7 +22,7 @@ typedef struct args
     const char *pass;
 } args;
 
-void print_args(const int argc, const char *argv[]);
 void parse_args(const int argc, const char *argv[], args *args);
+void print_help();
 
 #endif

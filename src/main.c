@@ -1,31 +1,27 @@
-#include "lib/include/common_libs.h"
-#include "lib/include/embed.h"
-#include "lib/include/parse_args.h"
+#include "common_libs.h"
+#include "parse_args.h"
+#include "steganography.h"
 
 int main(const int argc, const char* argv[]) {
-    args* args = malloc(sizeof(struct args));
-    if (args == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        return 1;
+    args args;
+    memset(&args, 0, sizeof(struct args));
+
+    parse_args(argc, argv, &args);
+
+    /**
+     * @todo hace el enctryption o decryption antes de embed o extract
+     * @todo por ahora cuando encodeas en la imagen como no se mete la longitud del mensaje
+     * ni datos utiles, deberíamos hacer que el mensaje tenga un formato que se pueda reconocer
+     */
+    if (args.action == EMBED) {
+        embed(args.p, args.in, args.out, args.steg);
     }
-
-    // Initialize the args struct to avoid undefined behavior
-    memset(args, 0, sizeof(struct args));
-
-    parse_args(argc, argv, args);
-
-    // Check if the action is embed or extract
-    if (args->action == EMBED) {
-        bmp_file bmp;
-        embed(*args, &bmp);
-    }
-    else if (args->action == EXTRACT) {
-        // extract(args);
+    else if (args.action == EXTRACT) {
+        extract(args.p, args.out, args.steg);
     }
     else {
         fprintf(stderr, "Error: Invalid action\n");
     }
 
-    free(args);  // Free the allocated memory
     return 0;
 }

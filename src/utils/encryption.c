@@ -1,4 +1,4 @@
-#include "include/encryption.h"
+#include "encryption.h"
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
