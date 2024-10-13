@@ -10,8 +10,6 @@ int main(const int argc, const char* argv[]) {
 
     /**
      * @todo hace el enctryption o decryption antes de embed o extract
-     * @todo por ahora cuando encodeas en la imagen como no se mete la longitud del mensaje
-     * ni datos utiles, deberíamos hacer que el mensaje tenga un formato que se pueda reconocer
      */
     if (args.action == EMBED) {
         embed(args.p, args.in, args.out, args.steg);

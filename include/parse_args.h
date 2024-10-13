@@ -5,7 +5,7 @@
 
 #include "common_libs.h"
 #include "encryption.h"
-#include "steg.h"
+#include "steg_utils.h"
 // struct for arguments
 
 typedef enum { NONE, EMBED, EXTRACT } action;
