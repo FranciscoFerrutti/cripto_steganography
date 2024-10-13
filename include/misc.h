@@ -3,6 +3,6 @@
 
 #include "common_libs.h"
 
-void print_table(const char *header, const char *firstAttribute, ...);
+void print_table(const char *header, int color, const char *firstAttribute, ...);
 
 #endif

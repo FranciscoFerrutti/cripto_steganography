@@ -9,7 +9,15 @@ void print_line(size_t table_width) {
         printf("-");
     printf("+\n");
 }
-
+void set_rgb_color_from_int(int color) {
+    int r = (color >> 16) & 0xFF;
+    int g = (color >> 8) & 0xFF;
+    int b = color & 0xFF;
+    printf("\033[38;2;%d;%d;%dm", r, g, b);
+}
+void reset_color() {
+    printf("\033[0m");
+}
 /**
  * @brief Print a table with the given attributes and values
  *
@@ -29,7 +37,7 @@ void print_line(size_t table_width) {
  * );
  *
  */
-void print_table(const char *header, const char *firstAttribute, ...) {
+void print_table(const char *header, int color, const char *firstAttribute, ...) {
     va_list     args;
     const char *attribute;
     const char *value;
@@ -38,11 +46,13 @@ void print_table(const char *header, const char *firstAttribute, ...) {
     size_t headerLength = strlen(header);
     size_t tableWidth   = (headerLength > 49) ? headerLength + 4 : 53;
 
-    print_line(tableWidth);
+    set_rgb_color_from_int(color);
 
+    print_line(tableWidth);
     printf("| %-*s |\n", (int) (tableWidth - 4), header);
-
     print_line(tableWidth);
+
+    reset_color();
 
     printf("| %-20s | %-26s |\n", "Attribute", "Value");
 

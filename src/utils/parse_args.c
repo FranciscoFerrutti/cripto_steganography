@@ -93,10 +93,12 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 }
                 else {
                     fprintf(stderr, "Invalid steg value: %s\n", optarg);
+                    fprintf(stderr, "Valid options are: LSB1, LSB4, LSBI\n");
                     exit(1);
                 }
                 break;
             case 'a':  // Encryption algorithm
+
                 if (strcmp(optarg, "aes128") == 0) {
                     args->a = AES128;
                 }
@@ -111,6 +113,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 }
                 else {
                     fprintf(stderr, "Invalid encryption algorithm: %s\n", optarg);
+                    fprintf(stderr, "Valid options are: aes128, aes192, aes256, 3des\n");
                     exit(1);
                 }
                 break;
@@ -129,6 +132,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 }
                 else {
                     fprintf(stderr, "Invalid mode value: %s\n", optarg);
+                    fprintf(stderr, "Valid options are: ecb, cfb, ofb, cbc\n");
                     exit(1);
                 }
                 break;

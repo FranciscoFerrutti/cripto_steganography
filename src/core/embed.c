@@ -18,18 +18,28 @@ void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize);
  * @param messageFile Path to the file containing the message to embed
  * @param outputFile Path to the output BMP file with the embedded message
  * @param method Steganography method to use
+ * @param a Encryption algorithm to use
+ * @param m Encryption mode to use
+ * @param pass Password to use for encryption
  *
+ * Embeds a message into a BMP file using steganography and encryption methods
  */
-void embed(const char *carrierFile, const char *messageFile, const char *outputFile, steg method) {
+void embed(const char *carrierFile,
+           const char *messageFile,
+           const char *outputFile,
+           steg        method,
+           encryption  a,
+           mode        m,
+           const char *pass) {
     BMP_FILE *bmp = read_bmp(carrierFile);
     if (!bmp) {
-        fprintf(stderr, "Error: Could not read BMP file %s\n", carrierFile);
+        print_table("Error: Could not read BMP file", 0xFF0000, "BMP file", carrierFile, NULL);
         exit(1);
     }
 
     /* dataSize | (embeddigData[data] | embeddingData[extension]) */
     size_t         dataSize;
-    unsigned char *embeddingData = prepare_embedding_data(messageFile, &dataSize);
+    unsigned char *embeddingData = prepare_embedding_data(messageFile, &dataSize, pass, a, m);
 
     /* Select the steganography method and embed the message into bmp*/
     switch (method) {
@@ -43,7 +53,7 @@ void embed(const char *carrierFile, const char *messageFile, const char *outputF
             lsbi_encode(bmp, embeddingData, dataSize);
             break;
         default:
-            fprintf(stderr, "Error: Invalid steganography method\n");
+            print_table("Invalid steganography method", 0xFF0000, "Error", "unknown method", NULL);
             free_bmp(bmp);
             free(embeddingData);
             exit(1);
@@ -51,7 +61,10 @@ void embed(const char *carrierFile, const char *messageFile, const char *outputF
 
     /* Write the new bmp to outputfile*/
     if (write_bmp(outputFile, bmp) != 0) {
-        fprintf(stderr, "Error: Could not write BMP file %s\n", outputFile);
+        print_table("Error: Could not write BMP file", 0xFF0000, "BMP file", carrierFile, NULL);
+        free_bmp(bmp);
+        free(embeddingData);
+        exit(1);
     }
 
     free_bmp(bmp);
@@ -60,14 +73,20 @@ void embed(const char *carrierFile, const char *messageFile, const char *outputF
     /*******************************************************************/
     char dataSizeStr[20];
     snprintf(dataSizeStr, sizeof(dataSizeStr), "%zu", dataSize);
-
     print_table("Successfully embedded!!",
+                0x00FF00,
                 "Output file",
                 outputFile,
                 "Stego Method",
                 steg_str[method],
                 "Size (bytes)",
                 dataSizeStr,
+                "Encryption Algorithm",
+                encryption_str[a],
+                "Mode",
+                mode_str[m],
+                "Password",
+                pass,
                 NULL);
 }
 

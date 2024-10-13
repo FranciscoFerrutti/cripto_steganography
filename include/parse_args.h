@@ -4,8 +4,8 @@
 #include <stdio.h>
 
 #include "common_libs.h"
+#include "embedding.h"
 #include "encryption.h"
-#include "steg_utils.h"
 // struct for arguments
 
 typedef enum { NONE, EMBED, EXTRACT } action;

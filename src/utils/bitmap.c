@@ -40,7 +40,7 @@ BMP_FILE *read_bmp(const char *filename) {
 
     // Verify that this is a BMP file by checking the magic number
     if (bmp->fileHeader.bfType != BF_TYPE) {
-        fprintf(stderr, "Not a valid BMP file\n");
+        fprintf(stderr, "Not a valid BMP file, magic number mismatch.\n");
         fclose(filePtr);
         free(bmp);
         return NULL;

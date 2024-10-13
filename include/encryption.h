@@ -8,18 +8,22 @@
 typedef enum { ENC_NONE, AES128, AES192, AES256, DES3 } encryption;
 typedef enum { MODE_NONE, ECB, CBC, CFB, OFB } mode;
 
-void encrypt(FILE *in, uint8_t *out, size_t size, const char *password, encryption a, mode m);
-void decrypt(FILE *in, uint8_t *out, size_t size, const char *password, encryption a, mode m);
+static const char* encryption_str[]
+    __attribute__((unused)) = {"None", "AES128", "AES192", "AES256", "3DES"};
 
-// Helper functions
-int generate_key_iv(
-    const char *password, unsigned char *key, unsigned char *iv, int key_len, int iv_len);
-int process_encryption(const uint8_t       *input,
-                       uint8_t             *output,
-                       size_t               input_len,
-                       const unsigned char *key,
-                       const unsigned char *iv,
-                       const EVP_CIPHER    *cipher,
-                       int                  encrypt);
+static const char* mode_str[] __attribute__((unused)) = {"None", "ECB", "CBC", "CFB", "OFB"};
+
+unsigned char* encrypt_data(const unsigned char* plaintext,
+                            size_t               plaintext_len,
+                            const char*          pass,
+                            encryption           a,
+                            mode                 m,
+                            size_t*              encrypted_len);
+unsigned char* decrypt_data(const unsigned char* ciphertext,
+                            size_t               ciphertext_len,
+                            const char*          pass,
+                            encryption           a,
+                            mode                 m,
+                            size_t*              decrypted_len);
 
 #endif
