@@ -63,9 +63,6 @@ BMP_FILE *read_bmp(const char *filename) {
         return NULL;
     }
 
-    /**
-     * @todo check si esta compresión se hace
-     */
     if (bmp->infoHeader.biCompression != 0) {
         printerr("BMP file is compressed, only uncompressed BMP files are supported.\n");
         fclose(filePtr);
@@ -99,7 +96,7 @@ BMP_FILE *read_bmp(const char *filename) {
     // Move the file pointer to the start of the bitmap data
     fseek(filePtr, bmp->fileHeader.bfOffBits, SEEK_SET);
 
-    // Read the pixel data
+    // Read the pixel data from top to bottom
     for (i = 0; i < bmp->infoHeader.biHeight; i++) {
         if (fread(bmp->pixels[i], sizeof(PIXEL), bmp->infoHeader.biWidth, filePtr) !=
             bmp->infoHeader.biWidth) {
@@ -159,9 +156,9 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
     uint32_t paddingSize = (4 - (bmp->infoHeader.biWidth * 3) % 4) % 4;
     uint8_t  padding[3]  = {0, 0, 0};  // Padding bytes, up to 3 bytes of padding
 
-    /* Write the pixel data */
+    /* Write the pixel data from top to bottom */
     for (uint32_t i = 0; i < bmp->infoHeader.biHeight; i++) {
-        /* Write pixel data for the current row */
+        /* Write pixel data for the current row, but reverse the index */
         if (fwrite(bmp->pixels[i], sizeof(PIXEL), bmp->infoHeader.biWidth, filePtr) !=
             bmp->infoHeader.biWidth) {
             printerr("Writing pixel data for row %d\n", i);
@@ -182,7 +179,6 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
     fclose(filePtr);
     return 0;
 }
-
 /* Free the BMP */
 void free_bmp(BMP_FILE *bmp) {
     for (uint32_t i = 0; i < bmp->infoHeader.biHeight; i++) {

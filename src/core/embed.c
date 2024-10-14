@@ -33,7 +33,7 @@ void embed(const char *carrierFile,
            const char *pass) {
     BMP_FILE *bmp = read_bmp(carrierFile);
     if (!bmp) {
-        print_table("Error: Could not read BMP file", 0xFF0000, "BMP file", carrierFile, NULL);
+        printerr("Could not read BMP file %s\n", carrierFile);
         exit(1);
     }
 
@@ -53,7 +53,7 @@ void embed(const char *carrierFile,
             lsbi_encode(bmp, embeddingData, dataSize);
             break;
         default:
-            print_table("Invalid steganography method", 0xFF0000, "Error", "unknown method", NULL);
+            printerr("Invalid steganography method\n");
             free_bmp(bmp);
             free(embeddingData);
             exit(1);
@@ -61,7 +61,7 @@ void embed(const char *carrierFile,
 
     /* Write the new bmp to outputfile*/
     if (write_bmp(outputFile, bmp) != 0) {
-        print_table("Error: Could not write BMP file", 0xFF0000, "BMP file", carrierFile, NULL);
+        printerr("Could not write BMP file %s\n", outputFile);
         free_bmp(bmp);
         free(embeddingData);
         exit(1);
@@ -73,8 +73,8 @@ void embed(const char *carrierFile,
     /*******************************************************************/
     char dataSizeStr[20];
     snprintf(dataSizeStr, sizeof(dataSizeStr), "%zu", dataSize);
-    print_table("Successfully embedded!!",
-                0x00FF00,
+    print_table("Successfully embedded data into BMP file",
+                0xa6da95,
                 "Output file",
                 outputFile,
                 "Stego Method",
@@ -83,7 +83,7 @@ void embed(const char *carrierFile,
                 dataSizeStr,
                 "Encryption Algorithm",
                 encryption_str[a],
-                "Mode",
+                "Enctryption Mode",
                 mode_str[m],
                 "Password",
                 pass,

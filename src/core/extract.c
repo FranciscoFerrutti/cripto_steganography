@@ -34,7 +34,7 @@ void extract(const char *carrierFile,
     /* Read the carrier BMP file */
     bmp = read_bmp(carrierFile);
     if (!bmp) {
-        print_table("Error: Could not read BMP file", 0xFF0000, "BMP file", carrierFile, NULL);
+        printerr("Could not read BMP file %s\n", carrierFile);
         exit(1);
     }
 
@@ -53,7 +53,7 @@ void extract(const char *carrierFile,
             extractedData = lsbi_decode(bmp, &dataSize);
             break;
         default:
-            print_table("Invalid steganography method", 0xFF0000, "Error", "unknown method", NULL);
+            printerr("Invalid steganography method\n");
             free_bmp(bmp);
             exit(1);
     }
@@ -62,13 +62,13 @@ void extract(const char *carrierFile,
     free_bmp(bmp);
 
     if (!extractedData) {
-        print_table("Error: Could not extract data", 0xFF0000, "Error", "no extracted data", NULL);
+        printerr("Error extracting data\n");
         exit(1);
     }
 
     /* Process the extracted data */
     if (extract_embedded_data(extractedData, dataSize, outputfile, pass, a, m) != 0) {
-        print_table("Error: Could not extract data", 0xFF0000, "Error", "extraction failed", NULL);
+        printerr("Error processing extracted data\n");
         free(extractedData);
         exit(1);
     }
@@ -80,8 +80,8 @@ void extract(const char *carrierFile,
 
     char dataSizeStr[20];
     snprintf(dataSizeStr, sizeof(dataSizeStr), "%zu", dataSize);
-    print_table("Successfully extracted",
-                0x00FF00,
+    print_table("Successfully extracted hidden data from BMP file",
+                0xa6da95,
                 "Output file",
                 outputfile,
                 "Steganography method",
@@ -90,7 +90,7 @@ void extract(const char *carrierFile,
                 dataSizeStr,
                 "Encryption Algorithm",
                 encryption_str[a],
-                "Mode",
+                "Encryption Mode",
                 mode_str[m],
                 "Password",
                 pass,
