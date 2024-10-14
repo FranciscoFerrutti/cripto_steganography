@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "common_libs.h"
+#include "misc.h"
 
 #define HELP_MSG \
     "\nUsage for concealment: \n\t\
@@ -82,57 +83,61 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 args->out = optarg;
                 break;
             case 's':  // Steganography method
-                if (strcmp(optarg, "LSB1") == 0) {
+                if (strcasecmp(optarg, "LSB1") == 0) {
                     args->steg = LSB1;
                 }
-                else if (strcmp(optarg, "LSB4") == 0) {
+                else if (strcasecmp(optarg, "LSB4") == 0) {
                     args->steg = LSB4;
                 }
-                else if (strcmp(optarg, "LSBI") == 0) {
+                else if (strcasecmp(optarg, "LSBI") == 0) {
                     args->steg = LSBI;
                 }
                 else {
-                    fprintf(stderr, "Invalid steg value: %s\n", optarg);
-                    fprintf(stderr, "Valid options are: LSB1, LSB4, LSBI\n");
+                    printerr("Invalid steg value: %s\n", optarg);
+                    fprintf(stderr, "- Valid options are: LSB1, LSB4, LSBI\n");
                     exit(1);
                 }
                 break;
             case 'a':  // Encryption algorithm
 
-                if (strcmp(optarg, "aes128") == 0) {
+                if (strcasecmp(optarg, "aes128") == 0) {
                     args->a = AES128;
                 }
-                else if (strcmp(optarg, "aes192") == 0) {
+                else if (strcasecmp(optarg, "aes192") == 0) {
                     args->a = AES192;
                 }
-                else if (strcmp(optarg, "aes256") == 0) {
+                else if (strcasecmp(optarg, "aes256") == 0) {
                     args->a = AES256;
                 }
-                else if (strcmp(optarg, "3des") == 0) {
+                else if (strcasecmp(optarg, "3des") == 0) {
                     args->a = DES3;
                 }
                 else {
-                    fprintf(stderr, "Invalid encryption algorithm: %s\n", optarg);
-                    fprintf(stderr, "Valid options are: aes128, aes192, aes256, 3des\n");
+                    fprintf(stderr,
+                            "\033[0;31mError\033[0m: Invalid encryption algorithm: %s\n",
+                            optarg);
+                    fprintf(stderr, "- Valid options are: aes128, aes192, aes256, 3des\n");
                     exit(1);
                 }
                 break;
             case 'm':  // Encryption mode
-                if (strcmp(optarg, "ecb") == 0) {
+                if (strcasecmp(optarg, "ecb") == 0) {
                     args->m = ECB;
                 }
-                else if (strcmp(optarg, "cfb") == 0) {
+                else if (strcasecmp(optarg, "cfb") == 0) {
                     args->m = CFB;
                 }
-                else if (strcmp(optarg, "ofb") == 0) {
+                else if (strcasecmp(optarg, "ofb") == 0) {
                     args->m = OFB;
                 }
-                else if (strcmp(optarg, "cbc") == 0) {
+                else if (strcasecmp(optarg, "cbc") == 0) {
                     args->m = CBC;
                 }
                 else {
-                    fprintf(stderr, "Invalid mode value: %s\n", optarg);
-                    fprintf(stderr, "Valid options are: ecb, cfb, ofb, cbc\n");
+                    fprintf(stderr,
+                            "\033[0;31mError\033[0m: Invalid encryption mode value: %s\n",
+                            optarg);
+                    fprintf(stderr, "- Valid options are: ecb, cfb, ofb, cbc\n");
                     exit(1);
                 }
                 break;
@@ -149,22 +154,55 @@ void parse_args(const int argc, const char *argv[], args *args) {
         }
     }
 
+    if (args->pass != NULL) {
+        // Caso 1: Se indica password pero no se indica modo ni algoritmo
+        if (args->a == ENC_NONE && args->m == MODE_NONE) {
+            args->a = AES128;
+            args->m = CBC;
+            printf(
+                "\033[0;33mWarning\033[0m: No encryption algorithm or mode specified. Using "
+                "default algorithm: "
+                "AES128 and mode: CBC\n");
+        }
+        // Caso 2: Se indica algoritmo y password, pero no modo
+        else if (args->a != ENC_NONE && args->m == MODE_NONE) {
+            args->m = CBC;
+            printf(
+                "\033[0;33mWarning\033[0m: No encryption mode specified. Using default mode: "
+                "CBC\n");
+        }
+        // Caso 3: Se indica modo y password, pero no algoritmo
+        else if (args->a == ENC_NONE && args->m != MODE_NONE) {
+            args->a = AES128;
+            printf(
+                "\033[0;33mWarning\033[0m: No encryption algorithm specified. Using default "
+                "algorithm: AES128\n");
+        }
+    }
+    else {
+        // Si no se proporcionó password, verificar que no se haya pedido cifrado
+        if (args->a != ENC_NONE || args->m != MODE_NONE) {
+            printerr(" Encryption/decryption requires a password.\n");
+            exit(1);
+        }
+    }
+
     if (args->action == EMBED) {
         if (!args->in || !args->p || !args->out || !args->steg) {
-            fprintf(stderr, "Error: Missing required arguments for embedding.\n");
+            printerr(" Missing required arguments for embedding.\n");
             print_help();
             exit(1);
         }
     }
     else if (args->action == EXTRACT) {
         if (!args->p || !args->out || !args->steg) {
-            fprintf(stderr, "Error: Missing required arguments for extraction.\n");
+            printerr(" Missing required arguments for extraction.\n");
             print_help();
             exit(1);
         }
     }
     else {
-        fprintf(stderr, "Error: No action specified. Use --embed or --extract.\n");
+        printerr(" No action specified. Use --embed or --extract.\n");
         print_help();
         exit(1);
     }

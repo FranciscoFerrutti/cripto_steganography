@@ -1,6 +1,7 @@
 #include "embedding.h"
 
 #include "encryption.h"
+#include "misc.h"
 /**
  * @brief Prepare the data to be embedded into a BMP file
  *
@@ -16,7 +17,7 @@ unsigned char* prepare_embedding_data(
     const char* messageFile, size_t* totalDataSize, const char* pass, encryption a, mode m) {
     FILE* file = fopen(messageFile, "rb");
     if (!file) {
-        fprintf(stderr, "Error: Could not open message file %s\n", messageFile);
+        printerr("Could not open message file %s\n", messageFile);
         return NULL;
     }
 
@@ -28,7 +29,7 @@ unsigned char* prepare_embedding_data(
     // Read the file data
     unsigned char* fileData = malloc(fileSize);
     if (!fileData) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
+        printerr("Memory allocation failed\n");
         fclose(file);
         return NULL;
     }
@@ -47,7 +48,7 @@ unsigned char* prepare_embedding_data(
     size_t         embeddingDataSize = sizeof(uint32_t) + fileSize + extensionLength;
     unsigned char* embeddingData     = malloc(embeddingDataSize);
     if (!embeddingData) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
+        printerr("Memory allocation failed\n");
         free(fileData);
         return NULL;
     }
@@ -77,11 +78,11 @@ unsigned char* prepare_embedding_data(
         *totalDataSize           = sizeof(uint32_t) + encrypted_len;
         unsigned char* finalData = malloc(*totalDataSize);
         if (!finalData) {
-            fprintf(stderr, "Error: Memory allocation failed\n");
+            printerr("Memory allocation failed\n");
             free(encrypted_data);
             return NULL;
         }
-
+    
         uint32_t encrypted_len32 = (uint32_t) encrypted_len;  // Ensure size is 4 bytes
         memcpy(finalData, &encrypted_len32, sizeof(uint32_t));
         memcpy(finalData + sizeof(uint32_t), encrypted_data, encrypted_len);
@@ -95,7 +96,7 @@ unsigned char* prepare_embedding_data(
         *totalDataSize           = sizeof(uint32_t) + embeddingDataSize;
         unsigned char* finalData = malloc(*totalDataSize);
         if (!finalData) {
-            fprintf(stderr, "Error: Memory allocation failed\n");
+            printerr("Memory allocation failed\n");
             free(embeddingData);
             return NULL;
         }
@@ -131,7 +132,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
 
     // Read the size of the encrypted or plain data (first 4 bytes)
     if (dataSize < sizeof(uint32_t)) {
-        fprintf(stderr, "Error: Data size is too small to contain a valid size header\n");
+        printerr("Data size is too small to contain a valid size header\n");
         return -1;
     }
 
@@ -140,7 +141,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
     offset += sizeof(uint32_t);
 
     if (embeddedDataSize > dataSize - offset) {
-        fprintf(stderr, "Error: Invalid embedded data size\n");
+        printerr("Invalid embedded data size\n");
         return -1;
     }
 
@@ -162,7 +163,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
         // No encryption; use the data as is
         decryptedData = malloc(embeddedDataSize);
         if (!decryptedData) {
-            fprintf(stderr, "Error: Memory allocation failed\n");
+            printerr("Memory allocation failed\n");
             return -1;
         }
         memcpy(decryptedData, embeddedData, embeddedDataSize);
@@ -174,7 +175,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
     // At this point, decryptedData contains the original embedding data
     // Extract the size of the original file (next 4 bytes)
     if (decryptedSize < sizeof(uint32_t)) {
-        fprintf(stderr, "Error: Decrypted data size is too small to contain a valid message\n");
+        printerr("Decrypted data size is too small to contain a valid message\n");
         free(decryptedData);
         return -1;
     }
@@ -184,7 +185,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
     offset += sizeof(uint32_t);
 
     if (messageSize > decryptedSize - offset) {
-        fprintf(stderr, "Error: Invalid message size\n");
+        printerr("Invalid message size\n");
         free(decryptedData);
         return -1;
     }
@@ -194,7 +195,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
     offset += messageSize;
 
     if (offset >= decryptedSize) {
-        fprintf(stderr, "Error: No file extension found\n");
+        printerr("No file extension found\n");
         free(decryptedData);
         return -1;
     }
@@ -204,7 +205,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
     size_t      extensionLength = strlen(extension) + 1;  // Include null terminator
 
     if (extensionLength <= 1 || extension[0] != '.') {
-        fprintf(stderr, "Error: Invalid file extension\n");
+        printerr("Invalid file extension\n");
         free(decryptedData);
         return -1;
     }
@@ -219,7 +220,7 @@ int extract_embedded_data(const unsigned char* dataBuffer,
 
     FILE* outputFile = fopen(outputFileWithExtension, "wb");
     if (!outputFile) {
-        fprintf(stderr, "Error: Could not open output file %s\n", outputFileWithExtension);
+        printerr("Could not open output file %s\n", outputFileWithExtension);
         free(decryptedData);
         return -1;
     }

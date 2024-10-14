@@ -78,3 +78,19 @@ void print_table(const char *header, int color, const char *firstAttribute, ...)
 
     va_end(args);  // Clean up the va_list
 }
+
+void printerr(const char *format, ...) {
+    va_list args;
+
+    // Start processing the variable arguments
+    va_start(args, format);
+
+    // Print the "Error" message in red
+    fprintf(stderr, "\033[0;31mError\033[0m: ");
+
+    // Print the formatted message (like printf)
+    vfprintf(stderr, format, args);
+
+    // Clean up the variable arguments list
+    va_end(args);
+}

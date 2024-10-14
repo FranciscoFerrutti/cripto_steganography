@@ -101,11 +101,15 @@ void embed(const char *carrierFile,
  */
 void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     size_t totalBits = dataSize * 8;  // Total bits to embed
-    size_t maxBytes  = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3;
-    size_t maxBits   = maxBytes * 8;
+    // there are 3 effective bits per pixel (1 per channel)
+    size_t maxBits = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3;
 
     if (totalBits > maxBits) {
-        fprintf(stderr, "Error: Data size exceeds BMP capacity\n");
+        printerr(
+            "Data size exceeds the maximum embedding capacity. You are trying to embed "
+            "%zu bytes, but the maximum capacity is %zu bytes.\n",
+            dataSize,
+            maxBits / 8);
         return;
     }
 
@@ -143,7 +147,7 @@ void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
 
     // Check if all data was embedded
     if (bitCount < totalBits) {
-        fprintf(stderr, "Error: Not all data was embedded\n");
+        printerr("Not all data was embedded\n");
     }
 }
 
@@ -159,11 +163,17 @@ void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
  */
 void lsb4_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     size_t totalNibbles = dataSize * 2;  // total bytes * 2 nibbles per byte to embed
-    size_t maxNibbles   = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3 * 2;
+    // there are 3 effective nibbles per pixel (1 per channel) so 12 bits per pixel
+    size_t maxBits   = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3 * 4;
+    size_t totalBits = dataSize * 8;  // Total bits to embed
 
     // Check if the BMP has enough capacity to hold the data
-    if (totalNibbles > maxNibbles) {
-        fprintf(stderr, "Error: Data size exceeds BMP capacity\n");
+    if (totalBits > maxBits) {
+        printerr(
+            "Data size exceeds the maximum embedding capacity. You are trying to embed %zu bytes, "
+            "but the maximum capacity is %zu bytes.\n",
+            dataSize,
+            maxBits / 8);
         return;
     }
 
@@ -201,7 +211,7 @@ void lsb4_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
 
     // Check if all data was embedded
     if (nibbleCount < totalNibbles) {
-        fprintf(stderr, "Error: Not all data was embedded\n");
+        printerr("Not all data was embedded\n");
     }
 }
 
@@ -225,7 +235,7 @@ void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
 
     // Check if the BMP has enough capacity to hold the data
     if (totalTwoBits > maxTwoBits) {
-        fprintf(stderr, "Error: Data size exceeds BMP capacity\n");
+        printerr("Data size exceeds BMP capacity\n");
         return;
     }
 
@@ -264,6 +274,6 @@ void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
 
     // Check if all data was embedded
     if (twoBitsCount < totalTwoBits) {
-        fprintf(stderr, "Error: Not all data was embedded\n");
+        printerr("Not all data was embedded\n");
     }
 }

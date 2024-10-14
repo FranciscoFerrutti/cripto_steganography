@@ -115,7 +115,7 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
     size_t         bufferSize    = 1024;  // Initial reasonable size
     unsigned char *extractedData = malloc(bufferSize);
     if (!extractedData) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
+        printerr(" Memory allocation failed\n");
         return NULL;
     }
 
@@ -139,7 +139,7 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
                     bufferSize *= 2;
                     unsigned char *temp = realloc(extractedData, bufferSize);
                     if (!temp) {
-                        fprintf(stderr, "Error: Memory allocation failed\n");
+                        printerr(" Memory allocation failed\n");
                         free(extractedData);
                         return NULL;
                     }
@@ -177,7 +177,7 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
 extraction_done:
 
     if (!sizeFieldRead) {
-        fprintf(stderr, "Error: Failed to read the size field from the image\n");
+        printerr(" Failed to read the size field from the image\n");
         free(extractedData);
         return NULL;
     }
@@ -186,7 +186,7 @@ extraction_done:
     size_t totalDataSize = sizeof(uint32_t) + embeddedDataSize;  // Size field + embedded data
     extractedData        = realloc(extractedData, totalDataSize);
     if (!extractedData) {
-        fprintf(stderr, "Error: Memory allocation failed during final adjustment\n");
+        printerr(" Memory allocation failed during final adjustment\n");
         return NULL;
     }
 
@@ -211,7 +211,7 @@ unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
     size_t         bufferSize    = 1024;  // Initial reasonable size
     unsigned char *extractedData = malloc(bufferSize);
     if (!extractedData) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
+        printerr(" Memory allocation failed\n");
         return NULL;
     }
 
@@ -238,7 +238,7 @@ unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
                     bufferSize *= 2;
                     unsigned char *temp = realloc(extractedData, bufferSize);
                     if (!temp) {
-                        fprintf(stderr, "Error: Memory allocation failed\n");
+                        printerr(" Memory allocation failed\n");
                         free(extractedData);
                         return NULL;
                     }
@@ -277,7 +277,7 @@ unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
 extraction_done:
 
     if (!sizeFieldRead) {
-        fprintf(stderr, "Error: Failed to read the size field from the image\n");
+        printerr(" Failed to read the size field from the image\n");
         free(extractedData);
         return NULL;
     }
@@ -286,7 +286,7 @@ extraction_done:
     size_t totalDataSize = sizeof(uint32_t) + embeddedDataSize;  // Size field + embedded data
     extractedData        = realloc(extractedData, totalDataSize);
     if (!extractedData) {
-        fprintf(stderr, "Error: Memory allocation failed during final adjustment\n");
+        printerr(" Memory allocation failed during final adjustment\n");
         return NULL;
     }
 
@@ -302,7 +302,7 @@ unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize) {
     size_t         bufferSize    = 1024;  // Initial reasonable size
     unsigned char *extractedData = malloc(bufferSize);
     if (!extractedData) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
+        printerr(" Memory allocation failed\n");
         return NULL;
     }
 
@@ -329,7 +329,7 @@ unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize) {
                     bufferSize *= 2;
                     unsigned char *temp = realloc(extractedData, bufferSize);
                     if (!temp) {
-                        fprintf(stderr, "Error: Memory allocation failed\n");
+                        printerr(" Memory allocation failed\n");
                         free(extractedData);
                         return NULL;
                     }
@@ -367,7 +367,7 @@ unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize) {
 extraction_done:
 
     if (!sizeFieldRead) {
-        fprintf(stderr, "Error: Failed to read the size field from the image\n");
+        printerr(" Failed to read the size field from the image\n");
         free(extractedData);
         return NULL;
     }
@@ -376,7 +376,7 @@ extraction_done:
     size_t totalDataSize = sizeof(uint32_t) + embeddedDataSize;  // Size field + embedded data
     extractedData        = realloc(extractedData, totalDataSize);
     if (!extractedData) {
-        fprintf(stderr, "Error: Memory allocation failed during final adjustment\n");
+        printerr(" Memory allocation failed during final adjustment\n");
         return NULL;
     }
 

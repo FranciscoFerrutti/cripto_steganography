@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "misc.h"
 /**
  * @brief Read a BMP file and store it in a BMP_FILE structure
  *
@@ -18,21 +19,21 @@ BMP_FILE *read_bmp(const char *filename) {
     // Allocate memory for BMP_FILE structure
     bmp = (BMP_FILE *) malloc(sizeof(BMP_FILE));
     if (!bmp) {
-        fprintf(stderr, "Memory allocation for BMP_FILE failed\n");
+        printerr("Memory allocation for BMP_FILE failed\n");
         return NULL;
     }
 
     // Open the file in binary mode
     filePtr = fopen(filename, "rb");
     if (filePtr == NULL) {
-        perror("Error opening file");
+        printerr("Opening BMP file\n");
         free(bmp);
         return NULL;
     }
 
     // Read the bitmap file header
     if (fread(&bmp->fileHeader, sizeof(BITMAPFILEHEADER), 1, filePtr) != 1) {
-        fprintf(stderr, "Error reading BMP file header.\n");
+        printerr("Reading BMP file header.\n");
         fclose(filePtr);
         free(bmp);
         return NULL;
@@ -40,7 +41,7 @@ BMP_FILE *read_bmp(const char *filename) {
 
     // Verify that this is a BMP file by checking the magic number
     if (bmp->fileHeader.bfType != BF_TYPE) {
-        fprintf(stderr, "Not a valid BMP file, magic number mismatch.\n");
+        printerr("Not a valid BMP file, magic number mismatch.\n");
         fclose(filePtr);
         free(bmp);
         return NULL;
@@ -48,7 +49,7 @@ BMP_FILE *read_bmp(const char *filename) {
 
     // Read the bitmap info header (DIB header)
     if (fread(&bmp->infoHeader, sizeof(BITMAPINFOHEADER), 1, filePtr) != 1) {
-        fprintf(stderr, "Error reading BMP info header.\n");
+        printerr("Reading BMP info header.\n");
         fclose(filePtr);
         free(bmp);
         return NULL;
@@ -56,7 +57,17 @@ BMP_FILE *read_bmp(const char *filename) {
 
     // Check if the BMP file is 24-bit (RGB format)
     if (bmp->infoHeader.biBitCount != 24) {
-        fprintf(stderr, "Unsupported BMP format: only 24-bit BMP files are supported.\n");
+        printerr("Unsupported BMP format: only 24-bit BMP files are supported.\n");
+        fclose(filePtr);
+        free(bmp);
+        return NULL;
+    }
+
+    /**
+     * @todo check si esta compresión se hace
+     */
+    if (bmp->infoHeader.biCompression != 0) {
+        printerr("BMP file is compressed, only uncompressed BMP files are supported.\n");
         fclose(filePtr);
         free(bmp);
         return NULL;
@@ -65,7 +76,7 @@ BMP_FILE *read_bmp(const char *filename) {
     // Allocate memory for a column of pixels
     bmp->pixels = (PIXEL **) malloc(bmp->infoHeader.biHeight * sizeof(PIXEL *));
     if (!bmp->pixels) {
-        fprintf(stderr, "Memory allocation for pixel rows failed\n");
+        printerr("Memory allocation for pixel rows failed\n");
         fclose(filePtr);
         free(bmp);
         return NULL;
@@ -75,7 +86,7 @@ BMP_FILE *read_bmp(const char *filename) {
     for (i = 0; i < bmp->infoHeader.biHeight; i++) {
         bmp->pixels[i] = (PIXEL *) malloc(bmp->infoHeader.biWidth * sizeof(PIXEL));
         if (!bmp->pixels[i]) {
-            fprintf(stderr, "Memory allocation for pixel row %d failed\n", i);
+            printerr("Memory allocation for pixel row %d failed\n", i);
             for (uint32_t k = 0; k < i; k++)
                 free(bmp->pixels[k]);
             free(bmp->pixels);
@@ -92,7 +103,7 @@ BMP_FILE *read_bmp(const char *filename) {
     for (i = 0; i < bmp->infoHeader.biHeight; i++) {
         if (fread(bmp->pixels[i], sizeof(PIXEL), bmp->infoHeader.biWidth, filePtr) !=
             bmp->infoHeader.biWidth) {
-            fprintf(stderr, "Error reading pixel data.\n");
+            printerr("Reading pixel data.\n");
             for (uint32_t k = 0; k < i; k++)
                 free(bmp->pixels[k]);
             free(bmp->pixels);
@@ -126,20 +137,20 @@ BMP_FILE *read_bmp(const char *filename) {
 int write_bmp(const char *filename, BMP_FILE *bmp) {
     FILE *filePtr = fopen(filename, "wb");
     if (filePtr == NULL) {
-        perror("Error opening file");
+        printerr("Opening BMP file\n");
         return -1;
     }
 
     // Write the file header
     if (fwrite(&bmp->fileHeader, sizeof(BITMAPFILEHEADER), 1, filePtr) != 1) {
-        fprintf(stderr, "Error writing BMP file header\n");
+        printerr("Writing BMP file header\n");
         fclose(filePtr);
         return -1;
     }
 
     // Write the info header
     if (fwrite(&bmp->infoHeader, sizeof(BITMAPINFOHEADER), 1, filePtr) != 1) {
-        fprintf(stderr, "Error writing BMP info header\n");
+        printerr("Writing BMP info header\n");
         fclose(filePtr);
         return -1;
     }
@@ -153,7 +164,7 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
         /* Write pixel data for the current row */
         if (fwrite(bmp->pixels[i], sizeof(PIXEL), bmp->infoHeader.biWidth, filePtr) !=
             bmp->infoHeader.biWidth) {
-            fprintf(stderr, "Error writing pixel data for row %d\n", i);
+            printerr("Writing pixel data for row %d\n", i);
             fclose(filePtr);
             return -1;
         }
@@ -161,7 +172,7 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
         /* Write padding bytes, if any */
         if (paddingSize > 0) {
             if (fwrite(padding, 1, paddingSize, filePtr) != paddingSize) {
-                fprintf(stderr, "Error writing padding for row %d\n", i);
+                printerr("Writing padding for row %d\n", i);
                 fclose(filePtr);
                 return -1;
             }
