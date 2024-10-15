@@ -8,8 +8,9 @@
 #include "misc.h"
 #include "steganography.h"
 
-unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize);
-unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize);
+unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted);
+unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted);
+unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted);
 
 int extract_embedded_data(const unsigned char *dataBuffer,
                           const char          *outputFilePath,
@@ -32,18 +33,20 @@ void extract(const char *carrierFile,
         printerr("Could not read BMP file %s\n", carrierFile);
         exit(1);
     }
-
+    int            encrypted     = pass != NULL;
     unsigned char *extractedData = NULL;
     size_t         dataSize      = 0;
     /* Select the steganography extraction method */
     switch (method) {
         case LSB1:
-            extractedData = lsb1_decode(bmp, &dataSize);
+            extractedData = lsb1_decode(bmp, &dataSize, encrypted);
             break;
         case LSB4:
-            extractedData = lsb4_decode(bmp, &dataSize);
+            extractedData = lsb4_decode(bmp, &dataSize, encrypted);
             break;
-
+        case LSBI:
+            extractedData = lsbi_decode(bmp, &dataSize, encrypted);
+            break;
         default:
             printerr("Invalid steganography method\n");
             free_bmp(bmp);
@@ -58,8 +61,7 @@ void extract(const char *carrierFile,
         exit(1);
     }
 
-    /* Process the extracted data */
-    printf("dataSize: %zu\n", dataSize);
+    /* At this point, extractedData contains the decrypted extracted data */
     if (extract_embedded_data(extractedData, outputfile, pass, a, m) != 0) {
         printerr("Error processing extracted data\n");
         free(extractedData);
@@ -90,7 +92,7 @@ void extract(const char *carrierFile,
                 NULL);
 }
 
-unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
+unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
     size_t width          = bmp->infoHeader.biWidth;
     size_t height         = bmp->infoHeader.biHeight;
     size_t max_data_bytes = (width * height * 3) / 8;  // Each pixel has 3 color components
@@ -135,7 +137,10 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
                         }
                     }
                     else if (dataBufferIndex >= 4 + *dataSize) {
-                        if (dataBuffer[dataBufferIndex - 1] == '\0') {
+                        if (!encrypted && dataBuffer[dataBufferIndex - 1] == '\0') {
+                            stop = 1;
+                        }
+                        else if (encrypted) {
                             stop = 1;
                         }
                     }
@@ -153,7 +158,7 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
     return dataBuffer;
 }
 
-unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
+unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
     size_t width          = bmp->infoHeader.biWidth;
     size_t height         = bmp->infoHeader.biHeight;
     size_t max_data_bytes = (width * height * 3) / 2;  // Each pixel has 3 color components
@@ -198,7 +203,10 @@ unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
                         }
                     }
                     else if (dataBufferIndex >= 4 + *dataSize) {
-                        if (dataBuffer[dataBufferIndex - 1] == '\0') {
+                        if (!encrypted && dataBuffer[dataBufferIndex - 1] == '\0') {
+                            stop = 1;
+                        }
+                        else if (encrypted) {
                             stop = 1;
                         }
                     }
@@ -216,34 +224,166 @@ unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
     return dataBuffer;
 }
 
+unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
+    size_t width  = bmp->infoHeader.biWidth;
+    size_t height = bmp->infoHeader.biHeight;
+
+    size_t total_components = width * height * 3;  // Total color components in the image
+    size_t max_data_bits    = width * height * 2;  // Only green and blue channels used
+    size_t max_data_bytes   = max_data_bits / 8;   // Maximum bytes that can be extracted
+
+    unsigned char *dataBuffer = malloc(max_data_bytes);
+    if (!dataBuffer) {
+        printerr("Memory allocation failed\n");
+        return NULL;
+    }
+
+    // Step 1: Read the 4-bit pattern map from the first 4 color components
+    uint8_t map_bits  = 0;
+    int     bits_read = 0;
+    size_t  idx       = 0;  // Index of the current color component
+    size_t  i, j, k, temp;
+
+    for (; bits_read < 4 && idx < total_components; idx++) {
+        i    = idx / (width * 3);
+        temp = idx % (width * 3);
+        j    = temp / 3;
+        k    = temp % 3;
+
+        if (i >= height || j >= width)
+            break;
+
+        PIXEL   pixel     = bmp->pixels[i][j];
+        uint8_t colors[3] = {pixel.blue, pixel.green, pixel.red};
+
+        uint8_t bit = colors[k] & 1;
+        map_bits |= bit << (3 - bits_read);
+        bits_read++;
+    }
+
+    if (bits_read < 4) {
+        printerr("Failed to read map bits\n");
+        free(dataBuffer);
+        return NULL;
+    }
+
+    // Step 2: Decode the hidden data using the inversion map
+    size_t  dataBufferIndex = 0;
+    uint8_t currentByte     = 0;
+    int     bitIndex        = 0;
+    int     stop            = 0;
+
+    for (; idx < total_components && !stop; idx++) {
+        // Skip the red channel (k == 2)
+        if ((idx % 3) == 2)
+            continue;
+
+        i    = idx / (width * 3);
+        temp = idx % (width * 3);
+        j    = temp / 3;
+        k    = temp % 3;
+
+        if (i >= height || j >= width)
+            break;
+
+        PIXEL   pixel       = bmp->pixels[i][j];
+        uint8_t colors[3]   = {pixel.blue, pixel.green, pixel.red};
+        uint8_t color_value = colors[k];
+
+        // Identify the pattern of the 2nd and 3rd LSBs
+        uint8_t pattern  = (color_value >> 1) & 0x3;         // grab the 2nd and 3rd LSBs
+        uint8_t inverted = (map_bits >> (3 - pattern)) & 1;  // check if the pattern is inverted
+
+        // Extract the LSB, invert if necessary
+        uint8_t bit = color_value & 1;
+        if (inverted)
+            bit ^= 1;
+
+        // Collect bits to form bytes
+        currentByte |= bit << (7 - bitIndex);
+        bitIndex++;
+
+        if (bitIndex == 8) {
+            dataBuffer[dataBufferIndex++] = currentByte;
+            currentByte                   = 0;
+            bitIndex                      = 0;
+
+            // Check for data size after reading the first 4 bytes
+            if (dataBufferIndex == 4) {
+                uint32_t size;
+                memcpy(&size, dataBuffer, 4);
+                size      = ntohl(size);
+                *dataSize = size;
+
+                if (4 + size + 1 > max_data_bytes) {
+                    printerr("Size mismatch, hidden data is too large for this image\n");
+                    free(dataBuffer);
+                    return NULL;
+                }
+            }
+            else if (dataBufferIndex >= 4 + *dataSize) {
+                if (!encrypted && dataBuffer[dataBufferIndex - 1] == '\0') {
+                    stop = 1;
+                }
+                else if (encrypted) {
+                    stop = 1;
+                }
+            }
+        }
+    }
+
+    if (!stop) {
+        printerr("End of image data reached before end of hidden data\n");
+        free(dataBuffer);
+        return NULL;
+    }
+
+    return dataBuffer;
+}
 int extract_embedded_data(const unsigned char *dataBuffer,
                           const char          *outputFilePath,
                           const char          *pass,
                           encryption           a,
                           mode                 m) {
-    printf("pass: %s\n", pass);
-    printf("a: %d\n", a);
-    printf("m: %d\n", m);
+    uint32_t             realSize;
+    unsigned char       *decryptedData   = NULL;        // Pointer for decrypted data
+    const unsigned char *finalDataBuffer = dataBuffer;  // Pointer to handle both cases
 
-    // Read the real size from the first 4 bytes
-    uint32_t realSize;
+    // Read the real size
     memcpy(&realSize, dataBuffer, 4);
     realSize = ntohl(realSize);
 
-    const unsigned char *fileData  = dataBuffer + 4;
+    // If a password is provided, decrypt the data
+    if (pass != NULL) {
+        size_t checkSize = 0;
+        decryptedData    = decrypt_data(dataBuffer + 4, realSize, pass, a, m, &checkSize);
+        if (!decryptedData || checkSize != realSize) {
+            printerr("Error decrypting data\n");
+            return -1;
+        }
+
+        // Update pointer to use decrypted data
+        finalDataBuffer = decryptedData;
+        memcpy(&realSize, finalDataBuffer, 4);  // Extract the actual size from the decrypted data
+        realSize = ntohl(realSize);
+    }
+
+    const unsigned char *fileData  = finalDataBuffer + 4;
     const char          *extension = (const char *) (fileData + realSize);
 
     // Validate the extension
     if (extension[0] != '.') {
         printerr("Invalid file extension\n");
+        free(decryptedData);  // Free if allocated
         return -1;
     }
 
     // Ensure the extension string is null-terminated within the buffer
-    size_t max_extension_len = strlen((const char *) dataBuffer) - (4 + realSize);
+    size_t max_extension_len = strlen((const char *) finalDataBuffer) - (4 + realSize);
     size_t extension_len     = strnlen(extension, max_extension_len);
     if (extension_len == max_extension_len) {
         printerr("File extension is not null-terminated\n");
+        free(decryptedData);  // Free if allocated
         return -1;
     }
 
@@ -252,6 +392,7 @@ int extract_embedded_data(const unsigned char *dataBuffer,
     char  *fullOutputFilePath = malloc(fullPathLen);
     if (!fullOutputFilePath) {
         printerr("Memory allocation failed\n");
+        free(decryptedData);  // Free if allocated
         return -1;
     }
     strcpy(fullOutputFilePath, outputFilePath);
@@ -263,6 +404,7 @@ int extract_embedded_data(const unsigned char *dataBuffer,
     if (!outFile) {
         printerr("Failed to open output file %s\n", fullOutputFilePath);
         free(fullOutputFilePath);
+        free(decryptedData);  // Free if allocated
         return -1;
     }
 
@@ -271,11 +413,13 @@ int extract_embedded_data(const unsigned char *dataBuffer,
         printerr("Failed to write all data to output file\n");
         fclose(outFile);
         free(fullOutputFilePath);
+        free(decryptedData);  // Free if allocated
         return -1;
     }
 
     fclose(outFile);
     free(fullOutputFilePath);
+    free(decryptedData);  // Free if allocated
 
     return 0;
 }

@@ -42,29 +42,30 @@ const EVP_CIPHER* get_cipher(encryption alg, mode mod) {
     }
     return NULL;
 }
-
 int generate_key_iv(
     const char* pass, unsigned char* key, unsigned char* iv, int key_len, int iv_len) {
-    // Fixed salt as specified in the task
-    const unsigned char salt[8] = {0};
+    const unsigned char salt[8]   = {0};
+    int                 total_len = key_len + iv_len;
+    unsigned char*      key_iv    = malloc(total_len);
 
-    int            total_len = key_len + iv_len;
-    unsigned char* key_iv    = malloc(total_len);
     if (!key_iv) {
         printerr("Memory allocation failed while generating key/IV\n");
         return 0;
     }
 
-    /* Derive key and IV from password using PBKDF2 */
-    if (PKCS5_PBKDF2_HMAC_SHA1(pass, strlen(pass), salt, sizeof(salt), 10000, total_len, key_iv) !=
-        1) {
-        printerr("Error deriving key and IV from password\n");
+    /* Derive key and IV from password using PBKDF2 with SHA-256 */
+    if (PKCS5_PBKDF2_HMAC(
+            pass, strlen(pass), salt, sizeof(salt), 10000, EVP_sha256(), total_len, key_iv) != 1) {
+        printerr("Error deriving key and IV from password using PBKDF2 with SHA-256\n");
         free(key_iv);
         return 0;
     }
 
+    // Copy the derived key and IV to the output buffers
     memcpy(key, key_iv, key_len);
-    memcpy(iv, key_iv + key_len, iv_len);
+    if (iv_len > 0) {
+        memcpy(iv, key_iv + key_len, iv_len);
+    }
 
     free(key_iv);
     return 1;
@@ -192,6 +193,7 @@ unsigned char* encrypt_data(const unsigned char* plaintext,
  * This is identical to the encryption function, but with the encryption functions replaced with
  * their decryption equivalents.
  */
+
 unsigned char* decrypt_data(const unsigned char* ciphertext,
                             size_t               ciphertext_len,
                             const char*          pass,
@@ -221,7 +223,7 @@ unsigned char* decrypt_data(const unsigned char* ciphertext,
         if (!iv) {
             printerr("Memory allocation failed for IV\n");
             EVP_CIPHER_CTX_free(ctx);
-            free(key);
+            free(key);  // Free the key before returning
             return NULL;
         }
     }
@@ -244,7 +246,7 @@ unsigned char* decrypt_data(const unsigned char* ciphertext,
         return NULL;
     }
 
-    // Decryption
+    // Allocate memory for plaintext
     unsigned char* plaintext = malloc(ciphertext_len + EVP_CIPHER_block_size(cipher_type));
     if (!plaintext) {
         printerr("Memory allocation failed for plaintext\n");
@@ -258,18 +260,19 @@ unsigned char* decrypt_data(const unsigned char* ciphertext,
     int len;
     if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len) != 1) {
         printerr("Error during decryption\n");
-        free(plaintext);
+        free(plaintext);  // Free the allocated plaintext on failure
         EVP_CIPHER_CTX_free(ctx);
         free(key);
         if (iv)
             free(iv);
         return NULL;
     }
+
     *decrypted_len = len;
 
     if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1) {
         printerr("Error during final decryption\n");
-        free(plaintext);
+        free(plaintext);  // Free plaintext on failure
         EVP_CIPHER_CTX_free(ctx);
         free(key);
         if (iv)
@@ -278,10 +281,11 @@ unsigned char* decrypt_data(const unsigned char* ciphertext,
     }
     *decrypted_len += len;
 
+    // Clean up the resources
     EVP_CIPHER_CTX_free(ctx);
     free(key);
     if (iv)
         free(iv);
 
-    return plaintext;
+    return plaintext;  // Return the successfully decrypted plaintext
 }
