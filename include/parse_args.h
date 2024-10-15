@@ -4,9 +4,8 @@
 #include <stdio.h>
 
 #include "common_libs.h"
-#include "embedding.h"
 #include "encryption.h"
-// struct for arguments
+#include "steganography.h"
 
 typedef enum { NONE, EMBED, EXTRACT } action;
 

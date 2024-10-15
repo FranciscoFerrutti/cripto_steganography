@@ -1,28 +1,22 @@
+#include <arpa/inet.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "bitmap.h"
+#include "encryption.h"
 #include "misc.h"
 #include "steganography.h"
 
 unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize);
 unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize);
-unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize);
 
-/**
- * @brief Extract a message from a BMP file using steganography
- *
- * @param carrierFile Path to the BMP file to extract the message from
- * @param outputfile Path to the output file to write the extracted message
- * @param method Steganography method to use
- * @param a Encryption algorithm to use
- * @param m Encryption mode to use
- * @param pass Password to use for encryption
- *
- * Extracts information from a BMP file using steganography and encryption methods then writes it to
- * an output file
- */
+int extract_embedded_data(const unsigned char *dataBuffer,
+                          const char          *outputFilePath,
+                          const char          *pass,
+                          encryption           a,
+                          mode                 m);
+
 void extract(const char *carrierFile,
              const char *outputfile,
              steg        method,
@@ -33,6 +27,7 @@ void extract(const char *carrierFile,
 
     /* Read the carrier BMP file */
     bmp = read_bmp(carrierFile);
+
     if (!bmp) {
         printerr("Could not read BMP file %s\n", carrierFile);
         exit(1);
@@ -40,7 +35,6 @@ void extract(const char *carrierFile,
 
     unsigned char *extractedData = NULL;
     size_t         dataSize      = 0;
-
     /* Select the steganography extraction method */
     switch (method) {
         case LSB1:
@@ -49,9 +43,7 @@ void extract(const char *carrierFile,
         case LSB4:
             extractedData = lsb4_decode(bmp, &dataSize);
             break;
-        case LSBI:
-            extractedData = lsbi_decode(bmp, &dataSize);
-            break;
+
         default:
             printerr("Invalid steganography method\n");
             free_bmp(bmp);
@@ -67,7 +59,8 @@ void extract(const char *carrierFile,
     }
 
     /* Process the extracted data */
-    if (extract_embedded_data(extractedData, dataSize, outputfile, pass, a, m) != 0) {
+    printf("dataSize: %zu\n", dataSize);
+    if (extract_embedded_data(extractedData, outputfile, pass, a, m) != 0) {
         printerr("Error processing extracted data\n");
         free(extractedData);
         exit(1);
@@ -97,289 +90,192 @@ void extract(const char *carrierFile,
                 NULL);
 }
 
-/**
- * @brief Decode a message from a BMP file using the LSB1 method
- *
- * @param bmp BMP file structure to extract the message from
- * @param dataSize Pointer to store the size of the extracted data
- *
- * @return Pointer to the extracted data
- *
- * Decodes the message from the least significant bit of the red channel of each pixel
- */
 unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize) {
-    size_t maxBits       = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3 * 8;
-    size_t totalBitsRead = 0;
+    size_t width          = bmp->infoHeader.biWidth;
+    size_t height         = bmp->infoHeader.biHeight;
+    size_t max_data_bytes = (width * height * 3) / 8;  // Each pixel has 3 color components
 
-    // Initial allocation for extractedData
-    size_t         bufferSize    = 1024;  // Initial reasonable size
-    unsigned char *extractedData = malloc(bufferSize);
-    if (!extractedData) {
-        printerr(" Memory allocation failed\n");
+    unsigned char *dataBuffer = malloc(max_data_bytes);
+    if (!dataBuffer) {
+        printerr("Memory allocation failed\n");
         return NULL;
     }
 
-    size_t   dataIndex = 0;
-    int      bitIndex  = 7;  // Start with the most significant bit
-    uint32_t i, j;
-    uint32_t embeddedDataSize = 0;  // Size of the embedded data after the size field
-    int      sizeFieldRead    = 0;  // Flag to indicate if the size field has been read
+    size_t  dataBufferIndex = 0;  // Index of the next byte to write in dataBuffer
+    uint8_t currentByte     = 0;  // Current byte being written to
+    int     bitIndex        = 0;  // Index of the next bit to write in currentByte
+    int     stop            = 0;  // Flag to stop the extraction process
 
-    // Extract the message from the BMP file pixel by pixel, color channel by color channel
-    for (i = 0; i < bmp->infoHeader.biHeight && totalBitsRead < maxBits; i++) {
-        for (j = 0; j < bmp->infoHeader.biWidth && totalBitsRead < maxBits; j++) {
-            uint8_t *colors[3] = {
-                &bmp->pixels[i][j].red, &bmp->pixels[i][j].green, &bmp->pixels[i][j].blue};
+    for (size_t i = 0; i < height && !stop; i++) {
+        for (size_t j = 0; j < width && !stop; j++) {
+            PIXEL   pixel     = bmp->pixels[i][j];
+            uint8_t colors[3] = {pixel.blue, pixel.green, pixel.red};
 
-            for (int k = 0; k < 3 && totalBitsRead < maxBits; k++) {
-                uint8_t lsb = *colors[k] & 0x01;  // Extract LSB
+            for (int k = 0; k < 3 && !stop; k++) {
+                uint8_t bit = colors[k] & 1;
+                currentByte |= bit << (7 - bitIndex);
+                bitIndex++;
 
-                // Ensure we have enough space in the buffer
-                if (dataIndex >= bufferSize) {
-                    bufferSize *= 2;
-                    unsigned char *temp = realloc(extractedData, bufferSize);
-                    if (!temp) {
-                        printerr(" Memory allocation failed\n");
-                        free(extractedData);
-                        return NULL;
+                if (bitIndex == 8) {
+                    dataBuffer[dataBufferIndex++] = currentByte;
+                    currentByte                   = 0;
+                    bitIndex                      = 0;
+
+                    // First 4 bytes contain the size of the hidden data
+                    if (dataBufferIndex == 4) {
+                        uint32_t size;
+                        memcpy(&size, dataBuffer, 4);
+                        size      = ntohl(size);
+                        *dataSize = size;
+
+                        if (4 + size + 1 > max_data_bytes) {  // +1 for at least '\0'
+                            printerr("Size missmatch, this size is too big for this image\n");
+                            free(dataBuffer);
+                            return NULL;
+                        }
                     }
-                    extractedData = temp;
-                }
-
-                // Set the current bit in the extracted data buffer
-                extractedData[dataIndex] &= ~(1 << bitIndex);  // Clear the bit at bitIndex
-                extractedData[dataIndex] |= lsb << bitIndex;   // Set the bit
-
-                if (bitIndex == 0) {
-                    bitIndex = 7;
-                    dataIndex++;
-                }
-                else {
-                    bitIndex--;
-                }
-
-                totalBitsRead++;
-
-                // If we've read 4 bytes (32 bits), extract the size field
-                if (!sizeFieldRead && dataIndex == sizeof(uint32_t)) {
-                    memcpy(&embeddedDataSize, extractedData, sizeof(uint32_t));
-                    sizeFieldRead = 1;
-                }
-
-                // If we've read all the embedded data, stop reading
-                if (sizeFieldRead && dataIndex >= sizeof(uint32_t) + embeddedDataSize) {
-                    goto extraction_done;
+                    else if (dataBufferIndex >= 4 + *dataSize) {
+                        if (dataBuffer[dataBufferIndex - 1] == '\0') {
+                            stop = 1;
+                        }
+                    }
                 }
             }
         }
     }
 
-extraction_done:
-
-    if (!sizeFieldRead) {
-        printerr(" Failed to read the size field from the image\n");
-        free(extractedData);
+    if (!stop) {
+        printerr("End of image data reached before end of hidden data\n");
+        free(dataBuffer);
         return NULL;
     }
 
-    // Adjust the size of the buffer to the actual data size
-    size_t totalDataSize = sizeof(uint32_t) + embeddedDataSize;  // Size field + embedded data
-    extractedData        = realloc(extractedData, totalDataSize);
-    if (!extractedData) {
-        printerr(" Memory allocation failed during final adjustment\n");
-        return NULL;
-    }
-
-    *dataSize = totalDataSize;  // Final size of the extracted data
-    return extractedData;
+    return dataBuffer;
 }
 
-/**
- * @brief Decode a message from a BMP file using the LSB4 method
- *
- * @param bmp BMP file structure to extract the message from
- * @param dataSize Pointer to store the size of the extracted data
- *
- * @return Pointer to the extracted data
- *
- */
 unsigned char *lsb4_decode(BMP_FILE *bmp, size_t *dataSize) {
-    size_t maxNibbles       = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3 * 2;
-    size_t totalNibblesRead = 0;
+    size_t width          = bmp->infoHeader.biWidth;
+    size_t height         = bmp->infoHeader.biHeight;
+    size_t max_data_bytes = (width * height * 3) / 2;  // Each pixel has 3 color components
 
-    // Initial allocation for extractedData
-    size_t         bufferSize    = 1024;  // Initial reasonable size
-    unsigned char *extractedData = malloc(bufferSize);
-    if (!extractedData) {
-        printerr(" Memory allocation failed\n");
+    unsigned char *dataBuffer = malloc(max_data_bytes);
+    if (!dataBuffer) {
+        printerr("Memory allocation failed\n");
         return NULL;
     }
 
-    size_t   dataIndex   = 0;
-    int      nibbleIndex = 1;  // Start with high nibble
-    uint32_t i, j;
-    uint32_t embeddedDataSize = 0;  // Size of the embedded data after the size field
-    int      sizeFieldRead    = 0;  // Flag to indicate if the size field has been read
+    size_t  dataBufferIndex = 0;  // Index of the next byte to write in dataBuffer
+    uint8_t currentByte     = 0;  // Current byte being written to
+    int     bitIndex        = 0;  // Index of the next bit to write in currentByte
+    int     stop            = 0;  // Flag to stop the extraction process
 
-    // Initialize extractedData to zero
-    memset(extractedData, 0, bufferSize);
+    for (size_t i = 0; i < height && !stop; i++) {
+        for (size_t j = 0; j < width && !stop; j++) {
+            PIXEL   pixel     = bmp->pixels[i][j];
+            uint8_t colors[3] = {pixel.blue, pixel.green, pixel.red};
 
-    // Extract nibbles from the image
-    for (i = 0; i < bmp->infoHeader.biHeight && totalNibblesRead < maxNibbles; i++) {
-        for (j = 0; j < bmp->infoHeader.biWidth && totalNibblesRead < maxNibbles; j++) {
-            uint8_t *colors[3] = {
-                &bmp->pixels[i][j].red, &bmp->pixels[i][j].green, &bmp->pixels[i][j].blue};
+            for (int k = 0; k < 3 && !stop; k++) {
+                uint8_t nibble = colors[k] & 0x0F;
+                currentByte |= nibble << (4 - bitIndex);
+                bitIndex += 4;
 
-            for (int k = 0; k < 3 && totalNibblesRead < maxNibbles; k++) {
-                uint8_t nibble = *colors[k] & 0x0F;  // Extract lower nibble
+                if (bitIndex == 8) {
+                    dataBuffer[dataBufferIndex++] = currentByte;
+                    currentByte                   = 0;
+                    bitIndex                      = 0;
 
-                // Ensure we have enough space in the buffer
-                if (dataIndex >= bufferSize) {
-                    bufferSize *= 2;
-                    unsigned char *temp = realloc(extractedData, bufferSize);
-                    if (!temp) {
-                        printerr(" Memory allocation failed\n");
-                        free(extractedData);
-                        return NULL;
+                    // First 4 bytes contain the size of the hidden data
+                    if (dataBufferIndex == 4) {
+                        uint32_t size;
+                        memcpy(&size, dataBuffer, 4);
+                        size      = ntohl(size);
+                        *dataSize = size;
+
+                        if (4 + size + 1 > max_data_bytes) {  // +1 for at least '\0'
+                            printerr("Size missmatch, this size is too big for this image\n");
+                            free(dataBuffer);
+                            return NULL;
+                        }
                     }
-                    extractedData = temp;
-                }
-
-                if (nibbleIndex == 1) {
-                    extractedData[dataIndex] &= 0x0F;         // Clear high nibble
-                    extractedData[dataIndex] |= nibble << 4;  // Set high nibble
-                    nibbleIndex = 0;
-                }
-                else {
-                    extractedData[dataIndex] &= 0xF0;    // Clear low nibble
-                    extractedData[dataIndex] |= nibble;  // Set low nibble
-                    nibbleIndex = 1;
-                    dataIndex++;
-                }
-
-                totalNibblesRead++;
-
-                // If we've read 4 bytes (8 nibbles), extract the size field
-                if (!sizeFieldRead && dataIndex == sizeof(uint32_t) && nibbleIndex == 1) {
-                    memcpy(&embeddedDataSize, extractedData, sizeof(uint32_t));
-                    sizeFieldRead = 1;
-                }
-
-                // If we've read all the embedded data, stop reading
-                if (sizeFieldRead && dataIndex >= sizeof(uint32_t) + embeddedDataSize &&
-                    nibbleIndex == 1) {
-                    goto extraction_done;
+                    else if (dataBufferIndex >= 4 + *dataSize) {
+                        if (dataBuffer[dataBufferIndex - 1] == '\0') {
+                            stop = 1;
+                        }
+                    }
                 }
             }
         }
     }
 
-extraction_done:
-
-    if (!sizeFieldRead) {
-        printerr(" Failed to read the size field from the image\n");
-        free(extractedData);
+    if (!stop) {
+        printerr("End of image data reached before end of hidden data\n");
+        free(dataBuffer);
         return NULL;
     }
 
-    // Adjust the size of the buffer to the actual data size
-    size_t totalDataSize = sizeof(uint32_t) + embeddedDataSize;  // Size field + embedded data
-    extractedData        = realloc(extractedData, totalDataSize);
-    if (!extractedData) {
-        printerr(" Memory allocation failed during final adjustment\n");
-        return NULL;
-    }
-
-    *dataSize = totalDataSize;  // Final size of the extracted data
-    return extractedData;
+    return dataBuffer;
 }
 
-unsigned char *lsbi_decode(BMP_FILE *bmp, size_t *dataSize) {
-    size_t maxTwoBits       = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3;
-    size_t totalTwoBitsRead = 0;
+int extract_embedded_data(const unsigned char *dataBuffer,
+                          const char          *outputFilePath,
+                          const char          *pass,
+                          encryption           a,
+                          mode                 m) {
+    printf("pass: %s\n", pass);
+    printf("a: %d\n", a);
+    printf("m: %d\n", m);
 
-    // Initial allocation for extractedData
-    size_t         bufferSize    = 1024;  // Initial reasonable size
-    unsigned char *extractedData = malloc(bufferSize);
-    if (!extractedData) {
-        printerr(" Memory allocation failed\n");
-        return NULL;
+    // Read the real size from the first 4 bytes
+    uint32_t realSize;
+    memcpy(&realSize, dataBuffer, 4);
+    realSize = ntohl(realSize);
+
+    const unsigned char *fileData  = dataBuffer + 4;
+    const char          *extension = (const char *) (fileData + realSize);
+
+    // Validate the extension
+    if (extension[0] != '.') {
+        printerr("Invalid file extension\n");
+        return -1;
     }
 
-    size_t   dataIndex = 0;
-    int      bitIndex  = 6;  // Start from the most significant bits
-    uint32_t i, j;
-    uint32_t embeddedDataSize = 0;  // Size of the embedded data after the size field
-    int      sizeFieldRead    = 0;  // Flag to indicate if the size field has been read
-
-    // Initialize extractedData to zero
-    memset(extractedData, 0, bufferSize);
-
-    // Extract two bits from each color channel
-    for (i = 0; i < bmp->infoHeader.biHeight && totalTwoBitsRead < maxTwoBits; i++) {
-        for (j = 0; j < bmp->infoHeader.biWidth && totalTwoBitsRead < maxTwoBits; j++) {
-            uint8_t *colors[3] = {
-                &bmp->pixels[i][j].red, &bmp->pixels[i][j].green, &bmp->pixels[i][j].blue};
-
-            for (int k = 0; k < 3 && totalTwoBitsRead < maxTwoBits; k++) {
-                uint8_t twoBits = *colors[k] & 0x03;  // Extract two LSBs
-
-                // Ensure we have enough space in the buffer
-                if (dataIndex >= bufferSize) {
-                    bufferSize *= 2;
-                    unsigned char *temp = realloc(extractedData, bufferSize);
-                    if (!temp) {
-                        printerr(" Memory allocation failed\n");
-                        free(extractedData);
-                        return NULL;
-                    }
-                    extractedData = temp;
-                }
-
-                // Place the two bits into the current byte in the extracted data buffer
-                extractedData[dataIndex] |= twoBits << bitIndex;
-
-                if (bitIndex == 0) {
-                    bitIndex = 6;
-                    dataIndex++;
-                }
-                else {
-                    bitIndex -= 2;
-                }
-
-                totalTwoBitsRead += 2;
-
-                // If we've read 4 bytes (16 two-bit units), extract the size field
-                if (!sizeFieldRead && dataIndex == sizeof(uint32_t) && bitIndex == 6) {
-                    memcpy(&embeddedDataSize, extractedData, sizeof(uint32_t));
-                    sizeFieldRead = 1;
-                }
-
-                // If we've read all the embedded data, stop reading
-                if (sizeFieldRead && dataIndex >= sizeof(uint32_t) + embeddedDataSize &&
-                    bitIndex == 6) {
-                    goto extraction_done;
-                }
-            }
-        }
+    // Ensure the extension string is null-terminated within the buffer
+    size_t max_extension_len = strlen((const char *) dataBuffer) - (4 + realSize);
+    size_t extension_len     = strnlen(extension, max_extension_len);
+    if (extension_len == max_extension_len) {
+        printerr("File extension is not null-terminated\n");
+        return -1;
     }
 
-extraction_done:
+    // Construct the full output file path
+    size_t fullPathLen        = strlen(outputFilePath) + extension_len + 1;  // +1 for '\0'
+    char  *fullOutputFilePath = malloc(fullPathLen);
+    if (!fullOutputFilePath) {
+        printerr("Memory allocation failed\n");
+        return -1;
+    }
+    strcpy(fullOutputFilePath, outputFilePath);
+    strncat(fullOutputFilePath, extension, extension_len);
+    fullOutputFilePath[fullPathLen - 1] = '\0';  // Ensure null-termination
 
-    if (!sizeFieldRead) {
-        printerr(" Failed to read the size field from the image\n");
-        free(extractedData);
-        return NULL;
+    // Write the file data to the output file
+    FILE *outFile = fopen(fullOutputFilePath, "wb");
+    if (!outFile) {
+        printerr("Failed to open output file %s\n", fullOutputFilePath);
+        free(fullOutputFilePath);
+        return -1;
     }
 
-    // Adjust the size of the buffer to the actual data size
-    size_t totalDataSize = sizeof(uint32_t) + embeddedDataSize;  // Size field + embedded data
-    extractedData        = realloc(extractedData, totalDataSize);
-    if (!extractedData) {
-        printerr(" Memory allocation failed during final adjustment\n");
-        return NULL;
+    size_t bytesWritten = fwrite(fileData, 1, realSize, outFile);
+    if (bytesWritten != realSize) {
+        printerr("Failed to write all data to output file\n");
+        fclose(outFile);
+        free(fullOutputFilePath);
+        return -1;
     }
 
-    *dataSize = totalDataSize;  // Final size of the extracted data
-    return extractedData;
+    fclose(outFile);
+    free(fullOutputFilePath);
+
+    return 0;
 }

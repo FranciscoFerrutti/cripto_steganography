@@ -1,10 +1,13 @@
-#ifndef EMBED_H
-#define EMBED_H
+#ifndef STEGANOGRAPHY_H
+#define STEGANOGRAPHY_H
 
 #include "bitmap.h"
 #include "common_libs.h"
-#include "embedding.h"
-#include "parse_args.h"
+#include "encryption.h"
+
+typedef enum steg { STEG_NONE, LSB1, LSB4, LSBI } steg;
+static const char *steg_str[]
+    __attribute__((unused)) = {"None", "LSB1", "LSB4", "LSBI"};  // ignore unused warning
 
 void embed(const char *carrierFile,
            const char *messageFile,
