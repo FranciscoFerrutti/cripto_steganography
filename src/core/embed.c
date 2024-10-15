@@ -334,7 +334,7 @@ unsigned char *prepare_embedding_data(
         unsigned char *encrypted_data =
             encrypt_data(embeddingData, embeddingDataSize, pass, a, m, &encrypted_len);
         if (!encrypted_data) {
-            fprintf(stderr, "Error encrypting data\n");
+            printerr("Error encrypting data\n");
             free(embeddingData);
             return NULL;
         }

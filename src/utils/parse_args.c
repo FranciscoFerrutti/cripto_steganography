@@ -94,7 +94,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 }
                 else {
                     printerr("Invalid steg value: %s\n", optarg);
-                    fprintf(stderr, "- Valid options are: LSB1, LSB4, LSBI\n");
+                    printerr("- Valid options are: LSB1, LSB4, LSBI\n");
                     exit(1);
                 }
                 break;
@@ -113,10 +113,8 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->a = DES3;
                 }
                 else {
-                    fprintf(stderr,
-                            "\033[0;31mError\033[0m: Invalid encryption algorithm: %s\n",
-                            optarg);
-                    fprintf(stderr, "- Valid options are: aes128, aes192, aes256, 3des\n");
+                    printerr("\033[0;31mError\033[0m: Invalid encryption algorithm: %s\n", optarg);
+                    printerr("- Valid options are: aes128, aes192, aes256, 3des\n");
                     exit(1);
                 }
                 break;
@@ -134,10 +132,8 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->m = CBC;
                 }
                 else {
-                    fprintf(stderr,
-                            "\033[0;31mError\033[0m: Invalid encryption mode value: %s\n",
-                            optarg);
-                    fprintf(stderr, "- Valid options are: ecb, cfb, ofb, cbc\n");
+                    printerr("\033[0;31mError\033[0m: Invalid encryption mode value: %s\n", optarg);
+                    printerr("- Valid options are: ecb, cfb, ofb, cbc\n");
                     exit(1);
                 }
                 break;
@@ -182,27 +178,27 @@ void parse_args(const int argc, const char *argv[], args *args) {
     else {
         // Si no se proporcionó password, verificar que no se haya pedido cifrado
         if (args->a != ENC_NONE || args->m != MODE_NONE) {
-            printerr(" Encryption/decryption requires a password.\n");
+            printerr("Encryption/decryption requires a password.\n");
             exit(1);
         }
     }
 
     if (args->action == EMBED) {
         if (!args->in || !args->p || !args->out || !args->steg) {
-            printerr(" Missing required arguments for embedding.\n");
+            printerr("Missing required arguments for embedding.\n");
             print_help();
             exit(1);
         }
     }
     else if (args->action == EXTRACT) {
         if (!args->p || !args->out || !args->steg) {
-            printerr(" Missing required arguments for extraction.\n");
+            printerr("Missing required arguments for extraction.\n");
             print_help();
             exit(1);
         }
     }
     else {
-        printerr(" No action specified. Use --embed or --extract.\n");
+        printerr("No action specified. Use --embed or --extract.\n");
         print_help();
         exit(1);
     }

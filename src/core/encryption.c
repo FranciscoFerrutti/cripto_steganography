@@ -214,7 +214,6 @@ unsigned char* decrypt_data(const unsigned char* ciphertext,
         return NULL;
     }
 
-    printf("Decrypting with %s/%d\n", EVP_CIPHER_name(cipher_type), EVP_CIPHER_mode(cipher_type));
     int key_len = EVP_CIPHER_key_length(cipher_type);
     int iv_len  = EVP_CIPHER_iv_length(cipher_type);
 

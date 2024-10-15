@@ -353,12 +353,10 @@ int extract_embedded_data(const unsigned char *dataBuffer,
     // Read the real size
     memcpy(&realSize, dataBuffer, 4);
     realSize = ntohl(realSize);
-    printf("1. realSize: %d\n", realSize);
     // If a password is provided, decrypt the data
     if (pass != NULL) {
         size_t checkSize = 0;
         decryptedData    = decrypt_data(dataBuffer + 4, realSize, pass, a, m, &checkSize);
-        printf("2. realSize: %ld\n", checkSize);
         if (!decryptedData || checkSize != realSize) {
             printerr("Error decrypting data\n");
             return -1;
@@ -367,9 +365,7 @@ int extract_embedded_data(const unsigned char *dataBuffer,
         // Update pointer to use decrypted data
         finalDataBuffer = decryptedData;
         memcpy(&realSize, finalDataBuffer, 4);
-        printf("realSize: %d\n", realSize);
         realSize = ntohl(realSize);
-        printf("realSize: %d\n", realSize);
     }
 
     const unsigned char *fileData  = finalDataBuffer + 4;
