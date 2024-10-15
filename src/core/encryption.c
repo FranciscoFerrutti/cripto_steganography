@@ -30,7 +30,7 @@ CipherMap cipher_map[] = {{AES128, ECB, EVP_aes_128_ecb},
                           {AES256, CFB, EVP_aes_256_cfb8},
                           {AES256, OFB, EVP_aes_256_ofb},
                           {DES3, CBC, EVP_des_ede3_cbc},
-                          {DES3, CFB, EVP_des_ede3_cfb64},
+                          {DES3, CFB, EVP_des_ede3_cfb8},
                           {DES3, OFB, EVP_des_ede3_ofb}};
 
 const EVP_CIPHER* get_cipher(encryption alg, mode mod) {
@@ -42,6 +42,7 @@ const EVP_CIPHER* get_cipher(encryption alg, mode mod) {
     }
     return NULL;
 }
+
 int generate_key_iv(
     const char* pass, unsigned char* key, unsigned char* iv, int key_len, int iv_len) {
     const unsigned char salt[8]   = {0};
@@ -213,6 +214,7 @@ unsigned char* decrypt_data(const unsigned char* ciphertext,
         return NULL;
     }
 
+    printf("Decrypting with %s/%d\n", EVP_CIPHER_name(cipher_type), EVP_CIPHER_mode(cipher_type));
     int key_len = EVP_CIPHER_key_length(cipher_type);
     int iv_len  = EVP_CIPHER_iv_length(cipher_type);
 
