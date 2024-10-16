@@ -357,7 +357,7 @@ int extract_embedded_data(const unsigned char *dataBuffer,
     if (pass != NULL) {
         size_t checkSize = 0;
         decryptedData    = decrypt_data(dataBuffer + 4, realSize, pass, a, m, &checkSize);
-        if (!decryptedData || checkSize != realSize) {
+        if (!decryptedData) {
             printerr("Error decrypting data\n");
             return -1;
         }

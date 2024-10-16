@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,7 +126,7 @@ void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
         for (j = 0; j < bmp->infoHeader.biWidth && bitCount < totalBits; j++) {
             // get the color channels of the current pixel
             uint8_t *colors[3] = {
-                &bmp->pixels[i][j].red, &bmp->pixels[i][j].green, &bmp->pixels[i][j].blue};
+                &bmp->pixels[i][j].blue, &bmp->pixels[i][j].green, &bmp->pixels[i][j].red};
 
             for (int k = 0; k < 3 && bitCount < totalBits; k++) {
                 // Get the current bit to embed from the data buffer
@@ -187,7 +188,7 @@ void lsb4_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     for (uint32_t i = 0; i < bmp->infoHeader.biHeight && nibbleCount < totalNibbles; i++) {
         for (uint32_t j = 0; j < bmp->infoHeader.biWidth && nibbleCount < totalNibbles; j++) {
             uint8_t *colors[3] = {
-                &bmp->pixels[i][j].red, &bmp->pixels[i][j].green, &bmp->pixels[i][j].blue};
+                &bmp->pixels[i][j].blue, &bmp->pixels[i][j].green, &bmp->pixels[i][j].red};
 
             // Similar if not same as lsb1
             for (int k = 0; k < 3 && nibbleCount < totalNibbles; k++) {
@@ -223,59 +224,100 @@ void lsb4_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
  * @param bmp       BMP file to embed the data into
  * @param data      Pointer to the data to embed
  * @param dataSize  Size of the data in bytes
- *
- * LSBI hides data in two least significant bits of each byte in the image's color channels (RGB).
  */
 void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
-    uint32_t i, j;
-    uint8_t  twoBits;
-    size_t   dataIndex    = 0;             // Index into the data buffer
-    int      bitIndex     = 0;             // Bit index within the current byte (increments by 2)
-    size_t   totalTwoBits = dataSize * 4;  // Total two-bit units to embed
-    size_t   maxTwoBits =
-        bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3;  // Max capacity in two-bit units
+    uint32_t i, j, k;
+    size_t   width            = bmp->infoHeader.biWidth;
+    size_t   height           = bmp->infoHeader.biHeight;
+    size_t   total_components = width * height * 3;
+    size_t   max_data_bits    = width * height * 2;  // Only green and blue channels used
+    size_t   max_data_bytes   = max_data_bits / 8;
 
     // Check if the BMP has enough capacity to hold the data
-    if (totalTwoBits > maxTwoBits) {
+    if (dataSize + 4 > max_data_bytes) {
         printerr("Data size exceeds BMP capacity\n");
         return;
     }
 
-    size_t twoBitsCount = 0;  // Counter for total two-bit units embedded
+    // Buffer to store inversion map
+    uint8_t map_bits     = 0;
+    int     bits_written = 0;
 
-    // Start embedding
-    for (i = 0; i < bmp->infoHeader.biHeight && twoBitsCount < totalTwoBits; i++) {
-        for (j = 0; j < bmp->infoHeader.biWidth && twoBitsCount < totalTwoBits; j++) {
-            // For each pixel, embed into the RGB channels
-            uint8_t *colors[3] = {
-                &bmp->pixels[i][j].red, &bmp->pixels[i][j].green, &bmp->pixels[i][j].blue};
+    // Embed the 4-bit pattern map into the first 4 color components using LSB1
+    size_t idx = 0;
+    for (bits_written = 0; bits_written < 4 && idx < total_components; idx++) {
+        i = idx / (width * 3);
+        j = (idx % (width * 3)) / 3;
+        k = idx % 3;
 
-            for (int k = 0; k < 3 && twoBitsCount < totalTwoBits; k++) {
-                // Get the current two bits to embed from the data buffer
-                uint8_t c = data[dataIndex];
-                twoBits   = (c >> (6 - bitIndex)) & 0x03;
+        if (i >= height || j >= width)
+            break;
 
-                // Embed the two bits into the least significant bits of the color channel
-                *colors[k] = (*colors[k] & 0xFC) | twoBits;
+        PIXEL  *pixel     = &bmp->pixels[i][j];
+        uint8_t colors[3] = {pixel->blue, pixel->green, pixel->red};
 
-                // Move to the next two bits
-                bitIndex += 2;
-                if (bitIndex == 8) {
-                    bitIndex = 0;
-                    dataIndex++;
-                    if (dataIndex >= dataSize) {
-                        // All data has been embedded
-                        return;
-                    }
-                }
+        uint8_t bit = (map_bits >> (3 - bits_written)) & 1;
+        colors[k]   = (colors[k] & 0xFE) | bit;
 
-                twoBitsCount++;
+        pixel->blue  = colors[0];
+        pixel->green = colors[1];
+        pixel->red   = colors[2];
+
+        bits_written++;
+    }
+
+    // Step 2: Embed the data using LSBI and inversion pattern
+    size_t dataIndex    = 0;
+    int    bitIndex     = 0;
+    size_t twoBitsCount = 0;
+    int    stop         = 0;
+
+    for (; idx < total_components && !stop; idx++) {
+        // Skip the red channel (k == 2)
+        if ((idx % 3) == 2)
+            continue;
+
+        i = idx / (width * 3);
+        j = (idx % (width * 3)) / 3;
+        k = idx % 3;
+
+        if (i >= height || j >= width)
+            break;
+
+        PIXEL  *pixel       = &bmp->pixels[i][j];
+        uint8_t colors[3]   = {pixel->blue, pixel->green, pixel->red};
+        uint8_t color_value = colors[k];
+
+        // Get the next bit to embed from the data buffer
+        uint8_t pattern  = (color_value >> 1) & 0x3;
+        uint8_t inverted = (map_bits >> (3 - pattern)) & 1;
+
+        uint8_t bit = (data[dataIndex] >> (7 - bitIndex)) & 1;
+        if (inverted)
+            bit ^= 1;
+
+        // Embed the bit into the color channel
+        colors[k]    = (colors[k] & 0xFE) | bit;
+        pixel->blue  = colors[0];
+        pixel->green = colors[1];
+        pixel->red   = colors[2];
+
+        bitIndex++;
+        if (bitIndex == 8) {
+            dataIndex++;
+            bitIndex = 0;
+
+            // Stop if we've embedded all the data
+            if (dataIndex >= dataSize) {
+                stop = 1;
             }
         }
+
+        twoBitsCount++;
     }
 
     // Check if all data was embedded
-    if (twoBitsCount < totalTwoBits) {
+    if (twoBitsCount < dataSize * 8) {
         printerr("Not all data was embedded\n");
     }
 }
@@ -320,8 +362,7 @@ unsigned char *prepare_embedding_data(
         return NULL;
     }
 
-    // Copy the size (uint32_t), data, and extension into the embeddingData buffer
-    uint32_t fileSize32 = (uint32_t) fileSize;  // Ensure file size is 4 bytes
+    uint32_t fileSize32 = htonl((uint32_t) fileSize);
     memcpy(embeddingData, &fileSize32, sizeof(uint32_t));
     memcpy(embeddingData + sizeof(uint32_t), fileData, fileSize);
     memcpy(embeddingData + sizeof(uint32_t) + fileSize, extension, extensionLength);
@@ -330,6 +371,7 @@ unsigned char *prepare_embedding_data(
 
     // Encrypt the embedding data if encryption is enabled
     if (a != ENC_NONE) {
+        // Tamaño cifrado || encripcion(tamaño real || datos archivo || extensión)
         size_t         encrypted_len;
         unsigned char *encrypted_data =
             encrypt_data(embeddingData, embeddingDataSize, pass, a, m, &encrypted_len);
@@ -350,7 +392,8 @@ unsigned char *prepare_embedding_data(
             return NULL;
         }
 
-        uint32_t encrypted_len32 = (uint32_t) encrypted_len;  // Ensure size is 4 bytes
+        uint32_t encrypted_len32 = htonl((uint32_t) encrypted_len);
+
         memcpy(finalData, &encrypted_len32, sizeof(uint32_t));
         memcpy(finalData + sizeof(uint32_t), encrypted_data, encrypted_len);
 
@@ -360,20 +403,8 @@ unsigned char *prepare_embedding_data(
     }
     else {
         // No encryption: prepare the final data to embed: data size (uint32_t) + data
-        *totalDataSize           = sizeof(uint32_t) + embeddingDataSize;
-        unsigned char *finalData = malloc(*totalDataSize);
-        if (!finalData) {
-            printerr("Memory allocation failed\n");
-            free(embeddingData);
-            return NULL;
-        }
+        *totalDataSize = embeddingDataSize;
 
-        uint32_t embeddingDataSize32 = (uint32_t) embeddingDataSize;  // Ensure size is 4 bytes
-        memcpy(finalData, &embeddingDataSize32, sizeof(uint32_t));
-        memcpy(finalData + sizeof(uint32_t), embeddingData, embeddingDataSize);
-
-        free(embeddingData);
-
-        return finalData;
+        return embeddingData;
     }
 }
