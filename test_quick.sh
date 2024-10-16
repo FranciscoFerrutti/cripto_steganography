@@ -7,7 +7,7 @@ make all
 # ./stegobmp --extract -p ./tests/facade_img.bmp --out ./tests/secret --steg LSBI
 
 
-./stegobmp --embed --in ./tests/get_secret.png  -p ./tests/lado.bmp  --out ./tests/facade_img.bmp --steg LSBI -a 3des -m cbc --pass "secretpassword"
+./stegobmp --embed --in ./tests/get_secret.png  -p ./tests/porter_img.bmp  --out ./tests/facade_img.bmp --steg LSBI -a 3des -m cbc --pass "secretpassword"
 ./stegobmp --extract -p ./tests/facade_img.bmp --out ./tests/get_secret --steg LSBI -a 3des -m cbc --pass "secretpassword"
 
 

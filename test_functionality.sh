@@ -31,4 +31,3 @@ for alg in "${algorithms[@]}"; do
         done
     done
 done
--a 3des -m cbc --pass "secretpassword"

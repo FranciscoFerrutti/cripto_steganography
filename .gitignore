@@ -15,3 +15,7 @@ test/*
 
 # executable
 stegobmp
+
+# valgrind
+
+valgrind-out.txt

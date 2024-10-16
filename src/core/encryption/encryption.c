@@ -21,6 +21,7 @@ CipherMap cipher_map[] = {{AES128, ECB, EVP_aes_128_ecb},
                           {AES256, CBC, EVP_aes_256_cbc},
                           {AES256, CFB, EVP_aes_256_cfb8},
                           {AES256, OFB, EVP_aes_256_ofb},
+                          {DES3, ECB, EVP_des_ede3_ecb},
                           {DES3, CBC, EVP_des_ede3_cbc},
                           {DES3, CFB, EVP_des_ede3_cfb8},
                           {DES3, OFB, EVP_des_ede3_ofb}};
