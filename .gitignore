@@ -2,7 +2,8 @@
 .vscode
 .vscode/*
 
-# .o
+# object
+build/
 *.o
 
 # .elf
@@ -11,3 +12,6 @@
 # test
 test
 test/*
+
+# executable
+stegobmp

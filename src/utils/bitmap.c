@@ -1,9 +1,4 @@
 #include "bitmap.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "misc.h"
 /**
  * @brief Read a BMP file and store it in a BMP_FILE structure
  *

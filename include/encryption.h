@@ -1,9 +1,11 @@
 #ifndef ENCRYPTION_H
 #define ENCRYPTION_H
 
+#include <openssl/err.h>
 #include <openssl/evp.h>
 
-#include "common_libs.h"
+#include "misc.h"
+#include "std_libs.h"
 
 typedef enum { ENC_NONE, AES128, AES192, AES256, DES3 } encryption;
 typedef enum { MODE_NONE, ECB, CBC, CFB, OFB } mode;

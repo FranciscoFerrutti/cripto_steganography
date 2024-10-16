@@ -1,13 +1,5 @@
 #include "parse_args.h"
 
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "common_libs.h"
-#include "misc.h"
-
 #define HELP_MSG \
     "\nUsage for concealment: \n\t\
 stegobmp -embed -in <file> -p <bitmapfile> -out <bitmapfile> -steg <LSB1 | LSB4 | LSBI>\n\n\
