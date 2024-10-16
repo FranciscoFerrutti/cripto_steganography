@@ -1,7 +1,4 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "misc.h"
 
 void print_line(size_t table_width) {
     printf("+");

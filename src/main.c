@@ -1,7 +1,6 @@
-#include "common_libs.h"
-#include "misc.h"
+#include "embedding.h"
+#include "extraction.h"
 #include "parse_args.h"
-#include "steganography.h"
 
 int main(const int argc, const char* argv[]) {
     args args;

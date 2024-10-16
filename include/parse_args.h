@@ -1,10 +1,11 @@
 #ifndef PARSE_ARGS_H
 #define PARSE_ARGS_H
 
-#include <stdio.h>
+#include <getopt.h>
 
-#include "common_libs.h"
 #include "encryption.h"
+#include "misc.h"
+#include "std_libs.h"
 #include "steganography.h"
 
 typedef enum { NONE, EMBED, EXTRACT } action;
