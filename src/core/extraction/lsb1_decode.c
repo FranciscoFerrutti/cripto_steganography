@@ -1,5 +1,18 @@
 #include "extraction.h"
 
+/**
+ * @brief Decodes hidden data from a BMP file using the LSB1 (Least Significant Bit) method.
+ *
+ * This function extracts data hidden in the least significant bits of the BMP image's pixel color
+ * components.
+ *
+ * @param bmp A pointer to a BMP_FILE structure containing the BMP image data.
+ * @param dataSize A pointer to a size_t variable where the size of the extracted data will be
+ * stored.
+ * @param encrypted An integer flag indicating whether the extracted data is encrypted (non-zero
+ * value indicates encrypted data).
+ * @return A pointer to the buffer containing the extracted data, or NULL if an error occurs.
+ */
 unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
     size_t width          = bmp->infoHeader.biWidth;
     size_t height         = bmp->infoHeader.biHeight;
