@@ -28,182 +28,157 @@ stegobmp -extract -p <bitmapfile> -out <file> -steg <LSB1 | LSB4 | LSBI> -a <aes
 -p <bitmapfile>: bmp carrier file\n\
 -out <file>: file to be overwritten with output\n"
 
+void print_args(const int argc, const char *argv[]) {
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d] = %s\n", i, argv[i]);
+    }
+}
+
 void print_help() {
     printf("%s\n", HELP_MSG);
 }
 
+void print_error(const char *msg) {
+    printf("Error: %s\n", msg);
+    print_help();
+}
+
 void parse_args(const int argc, const char *argv[], args *args) {
-    int option_index = 0;
-    int opt;
-
-    args->action = NONE;
-    args->in     = NULL;
-    args->p      = NULL;
-    args->out    = NULL;
-    args->steg   = STEG_NONE;
-    args->a      = ENC_NONE;
-    args->m      = MODE_NONE;
-    args->pass   = NULL;
-
     if (argc < 2) {
-        print_help();
+        print_error("Invalid number of arguments");
         exit(1);
     }
 
-    // larger than 1 character commands should be -- and single character commands should be -
-    static struct option long_options[] = {{"embed", no_argument, 0, 'e'},
-                                           {"extract", no_argument, 0, 'x'},
-                                           {"in", required_argument, 0, 'i'},
-                                           {"p", required_argument, 0, 'p'},
-                                           {"out", required_argument, 0, 'o'},
-                                           {"steg", required_argument, 0, 's'},
-                                           {"a", required_argument, 0, 'a'},
-                                           {"m", required_argument, 0, 'm'},
-                                           {"pass", required_argument, 0, 'k'},
-                                           {"help", no_argument, 0, 'h'},
-                                           {0, 0, 0, 0}};
+    if (strcmp(argv[1], "-help") == 0) {
+        print_help();
+        exit(0);
+    }
 
-    while ((opt = getopt_long(
-                argc, (char *const *) argv, "exi:p:o:s:a:m:k:h", long_options, &option_index)) !=
-           -1) {
-        switch (opt) {
-            case 'e':  // Embed option
-                args->action = EMBED;
-                break;
-            case 'x':  // Extract option
-                args->action = EXTRACT;
-                break;
-            case 'i':  // Input file
-                args->in = optarg;
-                break;
-            case 'p':  // Carrier file
-                args->p = optarg;
-                break;
-            case 'o':  // Output file
-                args->out = optarg;
-                break;
-            case 's':  // Steganography method
-                if (strcasecmp(optarg, "LSB1") == 0) {
+    if (strcmp(argv[1], "-embed") == 0) {
+        args->action = EMBED;
+    }
+    else if (strcmp(argv[1], "-extract") == 0) {
+        args->action = EXTRACT;
+    }
+    else {
+        print_error("Invalid action");
+        exit(1);
+    }
+
+    for (int i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "-in") == 0) {
+            if (i + 1 < argc) {
+                args->in = argv[i + 1];
+                i++;
+            }
+            else {
+                print_error("Missing value for -in");
+                exit(1);
+            }
+        }
+        else if (strcmp(argv[i], "-p") == 0) {
+            if (i + 1 < argc) {
+                args->p = argv[i + 1];
+                i++;
+            }
+            else {
+                print_error("Missing value for -p");
+                exit(1);
+            }
+        }
+        else if (strcmp(argv[i], "-out") == 0) {
+            if (i + 1 < argc) {
+                args->out = argv[i + 1];
+                i++;
+            }
+            else {
+                print_error("Missing value for -out");
+                exit(1);
+            }
+        }
+        else if (strcmp(argv[i], "-steg") == 0) {
+            if (i + 1 < argc) {
+                if (strcmp(argv[i + 1], "LSB1") == 0) {
                     args->steg = LSB1;
                 }
-                else if (strcasecmp(optarg, "LSB4") == 0) {
+                else if (strcmp(argv[i + 1], "LSB4") == 0) {
                     args->steg = LSB4;
                 }
-                else if (strcasecmp(optarg, "LSBI") == 0) {
+                else if (strcmp(argv[i + 1], "LSBI") == 0) {
                     args->steg = LSBI;
                 }
                 else {
-                    printerr("Invalid steg value: %s\n", optarg);
-                    fprintf(stderr, "- Valid options are: LSB1, LSB4, LSBI\n");
+                    print_error("Invalid steg");
                     exit(1);
                 }
-                break;
-            case 'a':  // Encryption algorithm
-
-                if (strcasecmp(optarg, "aes128") == 0) {
+                i++;
+            }
+            else {
+                print_error("Missing value for -steg");
+                exit(1);
+            }
+        }
+        else if (strcmp(argv[i], "-a") == 0) {
+            if (i + 1 < argc) {
+                if (strcmp(argv[i + 1], "aes128") == 0) {
                     args->a = AES128;
                 }
-                else if (strcasecmp(optarg, "aes192") == 0) {
+                else if (strcmp(argv[i + 1], "aes192") == 0) {
                     args->a = AES192;
                 }
-                else if (strcasecmp(optarg, "aes256") == 0) {
+                else if (strcmp(argv[i + 1], "aes256") == 0) {
                     args->a = AES256;
                 }
-                else if (strcasecmp(optarg, "3des") == 0) {
+                else if (strcmp(argv[i + 1], "3des") == 0) {
                     args->a = DES3;
                 }
                 else {
-                    fprintf(stderr,
-                            "\033[0;31mError\033[0m: Invalid encryption algorithm: %s\n",
-                            optarg);
-                    fprintf(stderr, "- Valid options are: aes128, aes192, aes256, 3des\n");
-                    exit(1);
+                    args->a = ENC_NONE;
                 }
-                break;
-            case 'm':  // Encryption mode
-                if (strcasecmp(optarg, "ecb") == 0) {
+                i++;
+            }
+            else {
+                print_error("Missing value for -a");
+                exit(1);
+            }
+        }
+        else if (strcmp(argv[i], "-m") == 0) {
+            if (i + 1 < argc) {
+                if (strcmp(argv[i + 1], "ecb") == 0) {
                     args->m = ECB;
                 }
-                else if (strcasecmp(optarg, "cfb") == 0) {
+                else if (strcmp(argv[i + 1], "cfb") == 0) {
                     args->m = CFB;
                 }
-                else if (strcasecmp(optarg, "ofb") == 0) {
+                else if (strcmp(argv[i + 1], "ofb") == 0) {
                     args->m = OFB;
                 }
-                else if (strcasecmp(optarg, "cbc") == 0) {
+                else if (strcmp(argv[i + 1], "cbc") == 0) {
                     args->m = CBC;
                 }
                 else {
-                    fprintf(stderr,
-                            "\033[0;31mError\033[0m: Invalid encryption mode value: %s\n",
-                            optarg);
-                    fprintf(stderr, "- Valid options are: ecb, cfb, ofb, cbc\n");
-                    exit(1);
+                    args->m = MODE_NONE;
                 }
-                break;
-            case 'k':
-                args->pass = optarg;
-                break;
-            case 'h':
-            case '?':
-                print_help();
-                exit(0);
-            default:
-                print_help();
+                i++;
+            }
+            else {
+                print_error("Missing value for -m");
                 exit(1);
+            }
         }
-    }
-
-    if (args->pass != NULL) {
-        // Caso 1: Se indica password pero no se indica modo ni algoritmo
-        if (args->a == ENC_NONE && args->m == MODE_NONE) {
-            args->a = AES128;
-            args->m = CBC;
-            printf(
-                "\033[0;33mWarning\033[0m: No encryption algorithm or mode specified. Using "
-                "default algorithm: "
-                "AES128 and mode: CBC\n");
+        else if (strcmp(argv[i], "-pass") == 0) {
+            if (i + 1 < argc) {
+                args->pass = argv[i + 1];
+                i++;
+            }
+            else {
+                print_error("Missing value for -pass");
+                exit(1);
+            }
         }
-        // Caso 2: Se indica algoritmo y password, pero no modo
-        else if (args->a != ENC_NONE && args->m == MODE_NONE) {
-            args->m = CBC;
-            printf(
-                "\033[0;33mWarning\033[0m: No encryption mode specified. Using default mode: "
-                "CBC\n");
-        }
-        // Caso 3: Se indica modo y password, pero no algoritmo
-        else if (args->a == ENC_NONE && args->m != MODE_NONE) {
-            args->a = AES128;
-            printf(
-                "\033[0;33mWarning\033[0m: No encryption algorithm specified. Using default "
-                "algorithm: AES128\n");
-        }
-    }
-    else {
-        // Si no se proporcionó password, verificar que no se haya pedido cifrado
-        if (args->a != ENC_NONE || args->m != MODE_NONE) {
-            printerr(" Encryption/decryption requires a password.\n");
+        else {
+            print_error("Invalid argument");
             exit(1);
         }
-    }
-
-    if (args->action == EMBED) {
-        if (!args->in || !args->p || !args->out || !args->steg) {
-            printerr(" Missing required arguments for embedding.\n");
-            print_help();
-            exit(1);
-        }
-    }
-    else if (args->action == EXTRACT) {
-        if (!args->p || !args->out || !args->steg) {
-            printerr(" Missing required arguments for extraction.\n");
-            print_help();
-            exit(1);
-        }
-    }
-    else {
-        printerr(" No action specified. Use --embed or --extract.\n");
-        print_help();
-        exit(1);
     }
 }
