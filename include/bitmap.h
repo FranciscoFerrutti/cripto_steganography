@@ -1,7 +1,8 @@
 #ifndef BMP_ADT_H
 #define BMP_ADT_H
 
-#include "common_libs.h"
+#include "misc.h"
+#include "std_libs.h"
 
 #pragma pack(push, 1)  // avoids padding bytes in structs in memory
 

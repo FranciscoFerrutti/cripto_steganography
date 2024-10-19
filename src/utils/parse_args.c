@@ -1,13 +1,5 @@
 #include "parse_args.h"
 
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "common_libs.h"
-#include "misc.h"
-
 #define HELP_MSG \
     "\nUsage for concealment: \n\t\
 stegobmp -embed -in <file> -p <bitmapfile> -out <bitmapfile> -steg <LSB1 | LSB4 | LSBI>\n\n\
@@ -38,14 +30,9 @@ void print_help() {
     printf("%s\n", HELP_MSG);
 }
 
-void print_error(const char *msg) {
-    printf("Error: %s\n", msg);
-    print_help();
-}
-
 void parse_args(const int argc, const char *argv[], args *args) {
     if (argc < 2) {
-        print_error("Invalid number of arguments");
+        printerr("Invalid number of arguments");
         exit(1);
     }
 
@@ -61,9 +48,12 @@ void parse_args(const int argc, const char *argv[], args *args) {
         args->action = EXTRACT;
     }
     else {
-        print_error("Invalid action");
+        printerr("Invalid action");
         exit(1);
     }
+
+    args->a = ENC_NONE;
+    args->m = MODE_NONE;
 
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "-in") == 0) {
@@ -72,7 +62,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 i++;
             }
             else {
-                print_error("Missing value for -in");
+                printerr("Missing value for -in");
                 exit(1);
             }
         }
@@ -82,7 +72,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 i++;
             }
             else {
-                print_error("Missing value for -p");
+                printerr("Missing value for -p");
                 exit(1);
             }
         }
@@ -92,7 +82,7 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 i++;
             }
             else {
-                print_error("Missing value for -out");
+                printerr("Missing value for -out");
                 exit(1);
             }
         }
@@ -108,13 +98,13 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->steg = LSBI;
                 }
                 else {
-                    print_error("Invalid steg");
+                    printerr("Invalid steg");
                     exit(1);
                 }
                 i++;
             }
             else {
-                print_error("Missing value for -steg");
+                printerr("Missing value for -steg");
                 exit(1);
             }
         }
@@ -133,12 +123,13 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->a = DES3;
                 }
                 else {
-                    args->a = ENC_NONE;
+                    printerr("Invalid encryption algorithm");
+                    exit(1);
                 }
                 i++;
             }
             else {
-                print_error("Missing value for -a");
+                printerr("Missing value for -a");
                 exit(1);
             }
         }
@@ -157,12 +148,13 @@ void parse_args(const int argc, const char *argv[], args *args) {
                     args->m = CBC;
                 }
                 else {
-                    args->m = MODE_NONE;
+                    printerr("Invalid mode");
+                    exit(1);
                 }
                 i++;
             }
             else {
-                print_error("Missing value for -m");
+                printerr("Missing value for -m");
                 exit(1);
             }
         }
@@ -172,12 +164,12 @@ void parse_args(const int argc, const char *argv[], args *args) {
                 i++;
             }
             else {
-                print_error("Missing value for -pass");
+                printerr("Missing value for -pass");
                 exit(1);
             }
         }
         else {
-            print_error("Invalid argument");
+            printerr("Invalid argument");
             exit(1);
         }
     }
