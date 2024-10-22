@@ -1,11 +1,12 @@
 #include "embedding.h"
 
 /**
- * @brief Encode data into a BMP file using the LSBI method
+ * @brief Embed a message into a BMP file using the LSBI steganography method
  *
- * @param bmp       BMP file to embed the data into
- * @param data      Pointer to the data to embed
- * @param dataSize  Size of the data in bytes
+ * @param bmp BMP file structure to embed the message into
+ * @param data Data to embed
+ * @param dataSize Size of the data to embed
+ *
  */
 void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     uint32_t i, j, k;

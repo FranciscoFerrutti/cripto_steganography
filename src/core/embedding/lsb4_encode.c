@@ -1,14 +1,12 @@
 #include "embedding.h"
 
 /**
- * @brief Encode data into a BMP file using the LSB4 method
+ * @brief Embed a message into a BMP file using the LSB4 steganography method
  *
- * @param bmp       BMP file to embed the data into
- * @param data      Pointer to the data to embed
- * @param dataSize  Size of the data in bytes
+ * @param bmp BMP file structure to embed the message into
+ * @param data Data to embed
+ * @param dataSize Size of the data to embed
  *
- * LSB4 hides data in the least significant 4 bits of each byte in the image's color channels (RGB)
- * This allows for larger messages to be embedded.
  */
 void lsb4_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     size_t totalNibbles = dataSize * 2;  // total bytes * 2 nibbles per byte to embed

@@ -1,13 +1,12 @@
 #include "embedding.h"
 
 /**
- * @brief Encode data into a BMP file using the LSB1 method
+ * @brief Embed a message into a BMP file using the LSB1 steganography method
  *
- * @param bmp       BMP file to embed the data into
- * @param data      Pointer to the data to embed
- * @param dataSize  Size of the data in bytes
+ * @param bmp BMP file structure to embed the message into
+ * @param data Data to embed
+ * @param dataSize Size of the data to embed
  *
- * LSB1 hides data in the least significant bit of each byte in the image's color channels (RGB)
  */
 void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     size_t totalBits = dataSize * 8;  // Total bits to embed

@@ -76,6 +76,8 @@ int generate_key_iv(
  * @param encrypted_len The length of the encrypted data to be returned
  *
  * @return The encrypted data
+ *
+ * @note The caller is responsible for freeing the returned data
  */
 unsigned char* encrypt_data(const unsigned char* plaintext,
                             size_t               plaintext_len,
@@ -184,10 +186,8 @@ unsigned char* encrypt_data(const unsigned char* plaintext,
  *
  * @return The decrypted data
  *
- * This is identical to the encryption function, but with the encryption functions replaced with
- * their decryption equivalents.
+ * @note The caller is responsible for freeing the returned pointer
  */
-
 unsigned char* decrypt_data(const unsigned char* ciphertext,
                             size_t               ciphertext_len,
                             const char*          pass,

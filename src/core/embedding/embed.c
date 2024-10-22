@@ -1,16 +1,17 @@
 #include "embedding.h"
+
+
 /**
- * @brief Embed a message into a BMP file using steganography
- *
+ * @brief Embed a message into a BMP file using the specified steganography method
+ * 
  * @param carrierFile Path to the BMP file to embed the message into
  * @param messageFile Path to the file containing the message to embed
- * @param outputFile Path to the output BMP file with the embedded message
+ * @param outputFile Path to the output BMP file
  * @param method Steganography method to use
  * @param a Encryption algorithm to use
  * @param m Encryption mode to use
- * @param pass Password to use for encryption
- *
- * Embeds a message into a BMP file using steganography and encryption methods
+ * 
+ * @note To ensure encryption a password must be provided
  */
 void embed(const char *carrierFile,
            const char *messageFile,
