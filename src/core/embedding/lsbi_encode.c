@@ -13,17 +13,19 @@ int lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     uint32_t i, j, k;
     size_t   width            = bmp->infoHeader.biWidth;
     size_t   height           = bmp->infoHeader.biHeight;
+    size_t   total_pixels     = width * height;
     size_t   total_components = width * height * 3;
-    size_t   max_data_bits    = width * height * 2;  // Only green and blue channels used
+    size_t   max_data_bits    = (total_pixels - 2) * 2 + 1;  // Only green and blue channels used
     size_t   max_data_bytes   = max_data_bits / 8;
 
     // Check if the BMP has enough capacity to hold the data
-    if (dataSize + 4 > max_data_bytes) {
+
+    if (dataSize > max_data_bytes) {
         printerr(
             "Data size exceeds the maximum embedding capacity. You are trying to embed %zu bytes, "
             "but the maximum capacity is %zu bytes.\n",
             dataSize,
-            max_data_bits / 8);
+            max_data_bytes);
         return -1;
     }
 
