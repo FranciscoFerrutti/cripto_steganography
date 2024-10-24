@@ -7,8 +7,9 @@
  * @param data Data to embed
  * @param dataSize Size of the data to embed
  *
+ * @return 0 on success, -1 on failure
  */
-void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
+int lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     uint32_t i, j, k;
     size_t   width            = bmp->infoHeader.biWidth;
     size_t   height           = bmp->infoHeader.biHeight;
@@ -18,8 +19,12 @@ void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
 
     // Check if the BMP has enough capacity to hold the data
     if (dataSize + 4 > max_data_bytes) {
-        printerr("Data size exceeds BMP capacity\n");
-        return;
+        printerr(
+            "Data size exceeds the maximum embedding capacity. You are trying to embed %zu bytes, "
+            "but the maximum capacity is %zu bytes.\n",
+            dataSize,
+            max_data_bits / 8);
+        return -1;
     }
 
     // Buffer to store inversion map
@@ -102,5 +107,8 @@ void lsbi_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     // Check if all data was embedded
     if (twoBitsCount < dataSize * 8) {
         printerr("Not all data was embedded\n");
+        return -1;
     }
+
+    return 0;
 }

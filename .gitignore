@@ -19,3 +19,5 @@ stegobmp
 # valgrind
 
 valgrind-out.txt
+
+/cripto

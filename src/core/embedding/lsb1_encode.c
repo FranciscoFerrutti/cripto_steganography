@@ -7,8 +7,9 @@
  * @param data Data to embed
  * @param dataSize Size of the data to embed
  *
+ * @return 0 on success, -1 on failure
  */
-void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
+int lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     size_t totalBits = dataSize * 8;  // Total bits to embed
     // there are 3 effective bits per pixel (1 per channel)
     size_t maxBits = bmp->infoHeader.biHeight * bmp->infoHeader.biWidth * 3;
@@ -19,7 +20,7 @@ void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
             "%zu bytes, but the maximum capacity is %zu bytes.\n",
             dataSize,
             maxBits / 8);
-        return;
+        return -1;
     }
 
     size_t   dataIndex = 0;  // Index into the data array
@@ -57,5 +58,8 @@ void lsb1_encode(BMP_FILE *bmp, const unsigned char *data, size_t dataSize) {
     // Check if all data was embedded
     if (bitCount < totalBits) {
         printerr("Not all data was embedded\n");
+        return -1;
     }
+
+    return 0;
 }

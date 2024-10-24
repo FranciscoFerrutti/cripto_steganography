@@ -1,16 +1,15 @@
 #include "embedding.h"
 
-
 /**
  * @brief Embed a message into a BMP file using the specified steganography method
- * 
+ *
  * @param carrierFile Path to the BMP file to embed the message into
  * @param messageFile Path to the file containing the message to embed
  * @param outputFile Path to the output BMP file
  * @param method Steganography method to use
  * @param a Encryption algorithm to use
  * @param m Encryption mode to use
- * 
+ *
  * @note To ensure encryption a password must be provided
  */
 void embed(const char *carrierFile,
@@ -30,16 +29,17 @@ void embed(const char *carrierFile,
     size_t         dataSize;
     unsigned char *embeddingData = prepare_embedding_data(messageFile, &dataSize, pass, a, m);
 
+    int result = 0;
     /* Select the steganography method and embed the message into bmp*/
     switch (method) {
         case LSB1:
-            lsb1_encode(bmp, embeddingData, dataSize);
+            result = lsb1_encode(bmp, embeddingData, dataSize);
             break;
         case LSB4:
-            lsb4_encode(bmp, embeddingData, dataSize);
+            result = lsb4_encode(bmp, embeddingData, dataSize);
             break;
         case LSBI:
-            lsbi_encode(bmp, embeddingData, dataSize);
+            result = lsbi_encode(bmp, embeddingData, dataSize);
             break;
         default:
             printerr("Invalid steganography method\n");
@@ -48,6 +48,12 @@ void embed(const char *carrierFile,
             exit(1);
     }
 
+    if (result == -1) {
+        printerr("Error embedding data\n");
+        free_bmp(bmp);
+        free(embeddingData);
+        exit(1);
+    }
     /* Write the new bmp to outputfile*/
     if (write_bmp(outputFile, bmp) != 0) {
         printerr("Could not write BMP file %s\n", outputFile);

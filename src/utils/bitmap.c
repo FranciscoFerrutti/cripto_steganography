@@ -126,10 +126,33 @@ BMP_FILE *read_bmp(const char *filename) {
  *
  * @return 0 on success, -1 on failure
  */
+
 int write_bmp(const char *filename, BMP_FILE *bmp) {
-    FILE *filePtr = fopen(filename, "wb");
+    // Add ".bmp" extension if not present
+    const char *extension = ".bmp";
+    char       *output_filename;
+
+    if (strstr(filename, extension) == NULL) {
+        // Allocate space for the new filename with .bmp extension
+        output_filename = malloc(strlen(filename) + strlen(extension) + 1);
+        if (output_filename == NULL) {
+            printerr("Memory allocation for filename\n");
+            return -1;
+        }
+        // Append ".bmp" to the filename
+        strcpy(output_filename, filename);
+        strcat(output_filename, extension);
+    }
+    else {
+        // Use the original filename if it already has the .bmp extension
+        output_filename = (char *) filename;
+    }
+
+    FILE *filePtr = fopen(output_filename, "wb");
     if (filePtr == NULL) {
         printerr("Opening BMP file\n");
+        if (output_filename != filename)
+            free(output_filename);  // Free if allocated
         return -1;
     }
 
@@ -137,6 +160,8 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
     if (fwrite(&bmp->fileHeader, sizeof(BITMAPFILEHEADER), 1, filePtr) != 1) {
         printerr("Writing BMP file header\n");
         fclose(filePtr);
+        if (output_filename != filename)
+            free(output_filename);
         return -1;
     }
 
@@ -144,6 +169,8 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
     if (fwrite(&bmp->infoHeader, sizeof(BITMAPINFOHEADER), 1, filePtr) != 1) {
         printerr("Writing BMP info header\n");
         fclose(filePtr);
+        if (output_filename != filename)
+            free(output_filename);
         return -1;
     }
 
@@ -158,6 +185,8 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
             bmp->infoHeader.biWidth) {
             printerr("Writing pixel data for row %d\n", i);
             fclose(filePtr);
+            if (output_filename != filename)
+                free(output_filename);
             return -1;
         }
 
@@ -166,14 +195,19 @@ int write_bmp(const char *filename, BMP_FILE *bmp) {
             if (fwrite(padding, 1, paddingSize, filePtr) != paddingSize) {
                 printerr("Writing padding for row %d\n", i);
                 fclose(filePtr);
+                if (output_filename != filename)
+                    free(output_filename);
                 return -1;
             }
         }
     }
 
     fclose(filePtr);
+    if (output_filename != filename)
+        free(output_filename);  // Free allocated memory
     return 0;
 }
+
 /* Free the BMP */
 void free_bmp(BMP_FILE *bmp) {
     for (uint32_t i = 0; i < bmp->infoHeader.biHeight; i++) {

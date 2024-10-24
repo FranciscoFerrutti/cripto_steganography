@@ -44,6 +44,11 @@ int process_extracted_data(const unsigned char *dataBuffer,
     const unsigned char *fileData  = finalDataBuffer + sizeof(realSize);
     const char          *extension = (const char *) (fileData + realSize);
 
+    if (extension[0] != '.') {
+        printerr("File extension is not valid\n");
+        free(decryptedData);
+        return -1;
+    }
     // Ensure the file extension is null-terminated within the buffer
     size_t maxExtensionLen = strlen((const char *) finalDataBuffer) - (sizeof(realSize) + realSize);
     size_t extensionLen    = strnlen(extension, maxExtensionLen);
