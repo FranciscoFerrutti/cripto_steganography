@@ -1,14 +1,15 @@
-#include "extraction.h"
+#include <ctype.h>
 
+#include "extraction.h"
 /**
  * @brief Extract hidden data from a BMP file using the LSB1 steganography method
- * 
+ *
  * @param bmp BMP file structure to extract data from
  * @param dataSize Pointer to store the size of the extracted data
  * @param encrypted Flag to indicate if the data is encrypted
- * 
+ *
  * @return Pointer to the extracted data buffer
- * 
+ *
  * @note The caller is responsible for freeing the returned buffer
  */
 unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
@@ -19,31 +20,32 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
     // Allocate memory for the extracted data buffer
     unsigned char *dataBuffer = malloc(maxDataBytes);
     if (!dataBuffer) {
-        printerr("Memory allocation failed\n");
+        fprintf(stderr, "Memory allocation failed\n");
         return NULL;
     }
 
-    size_t  dataBufferIndex = 0;  // Index for writing bytes into the data buffer
-    uint8_t currentByte     = 0;  // Byte currently being constructed from bits
-    int     bitIndex        = 0;  // Tracks position within the current byte (0-7)
-    int     stop            = 0;  // Flag to stop extraction when done
+    size_t  dataBufferIndex    = 0;  // Index for writing bytes into the data buffer
+    uint8_t currentByte        = 0;  // Byte currently being constructed from bits
+    int     bitIndex           = 0;  // Tracks position within the current byte (0-7)
+    int     extractionComplete = 0;  // Flag to stop extraction when done
+    int     extensionFound     = 0;  // Flag to indicate if the file extension start has been found
 
     // Iterate over each pixel in the BMP image
-    for (size_t i = 0; i < height && !stop; i++) {
-        for (size_t j = 0; j < width && !stop; j++) {
+    for (size_t i = 0; i < height && !extractionComplete; ++i) {
+        for (size_t j = 0; j < width && !extractionComplete; ++j) {
             PIXEL   pixel     = bmp->pixels[i][j];
             uint8_t colors[3] = {pixel.blue, pixel.green, pixel.red};
 
             // Extract the LSB from each color component
-            for (int k = 0; k < 3 && !stop; k++) {
+            for (int k = 0; k < 3 && !extractionComplete; ++k) {
                 uint8_t bit = colors[k] & 1;
-                currentByte |= bit << (7 - bitIndex);  // Set the bit in the correct position
-                bitIndex++;
+                currentByte = (currentByte << 1) | bit;
+                ++bitIndex;
 
                 // If we have a full byte, store it in the data buffer
                 if (bitIndex == 8) {
                     dataBuffer[dataBufferIndex++] = currentByte;
-                    currentByte                   = 0;  // Reset for the next byte
+                    currentByte                   = 0;
                     bitIndex                      = 0;
 
                     // The first 4 bytes represent the size of the hidden data
@@ -54,21 +56,31 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
                         *dataSize = size;
 
                         // Ensure the reported size fits within the maximum capacity
-                        if (4 + size + 1 > maxDataBytes) {  // +1 for at least the null terminator
-                            printerr(
-                                "Size mismatch: read size too large to be embedded in this file\n");
+                        if (4 + *dataSize > maxDataBytes) {
+                            fprintf(stderr, "Size mismatch: read size too large\n");
                             free(dataBuffer);
                             return NULL;
                         }
                     }
-                    // Stop extraction when the data size is reached
-                    else if (dataBufferIndex >= 4 + *dataSize) {
-                        if (!encrypted && dataBuffer[dataBufferIndex - 1] == '\0') {
-                            stop = 1;
+
+                    // Check if extraction should be stopped
+                    if (dataBufferIndex >= 4 + *dataSize) {
+                        if (!encrypted) {
+                            if (!extensionFound && dataBuffer[dataBufferIndex - 1] == '.') {
+                                extensionFound = 1;
+                            }
+                            else if (extensionFound && dataBuffer[dataBufferIndex - 1] == '\0') {
+                                extractionComplete = 1;
+                            }
                         }
-                        else if (encrypted) {
-                            stop = 1;
+                        else {
+                            extractionComplete = 1;
                         }
+                    }
+
+                    // Prevent buffer overflow
+                    if (dataBufferIndex >= maxDataBytes) {
+                        extractionComplete = 1;
                     }
                 }
             }
@@ -76,8 +88,8 @@ unsigned char *lsb1_decode(BMP_FILE *bmp, size_t *dataSize, int encrypted) {
     }
 
     // If the loop ended without extracting all data, report an error
-    if (!stop) {
-        printerr("End of image data reached before completing extraction\n");
+    if (!extractionComplete) {
+        fprintf(stderr, "End of image data reached before completing extraction\n");
         free(dataBuffer);
         return NULL;
     }
