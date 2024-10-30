@@ -1,91 +1,72 @@
-# cripto_steganography
-stegoBMP es una herramienta de esteganografía que permite ocultar información en imágenes BMP. La herramienta permite ocultar información en imágenes BMP utilizando el algoritmo de esteganografía LSB1 y cifrado de la información utilizando algoritmos de cifrado simétrico como AES y 3DES con modos de operación CBC, ECB, CFB y OFB. La herramienta también permite extraer la información oculta en una imagen BMP.
+# Índice
 
-## Compilar
+1. [Cripto_Steganography](#cripto_steganography)
+2. [Compilación](#compilación)
+3. [Ejemplos de Uso](#ejemplos-de-uso)
+   - [Parámetros Generales](#parámetros-generales)
+   - [Embedding](#embedding)
+     - [Con cifrado](#con-cifrado)
+     - [Sin cifrado](#sin-cifrado)
+   - [Extraction](#extraction)
+     - [Con cifrado](#con-cifrado-1)
+     - [Sin cifrado](#sin-cifrado-1)
 
-Para compilar el proyecto se necesita tener instalado el compilador GCC y la herramienta de compilación make. Para compilar el proyecto se debe ejecutar el siguiente comando en el directorio raíz del proyecto.
+# Cripto_Steganography
 
-```sh {"id":"01JA3VGPSHQWK1WT026B2474MV"}
+**stegobmp** es una herramienta de esteganografía que permite ocultar y extraer información en imágenes BMP mediante técnicas de esteganografía (LSB1, LSB4, LSBI) y cifrado simétrico (AES y 3DES) con modos de operación CBC, ECB, CFB y OFB.
+
+## Compilación
+
+Para compilar el proyecto, necesitas GCC y `make`. En el directorio raíz del proyecto, ejecutar:
+
+```sh
 make all
 ```
 
-## Ejemplos de uso
+Esto genera un ejecutable `stegobmp`, ver los ejemplos de uso.
 
-### Ocultar información en una imagen BMP sin cifrado
+## Ejemplos de Uso
 
-Se debe indicar como primer argumento `--embed` para indicar que se va a ocultar información en una imagen BMP. Los siguientes argumentos pueden variar su orden:
-* `--in` para indicar la ruta de la imagen que se va a ocultar.
-* `--p` para indicar la ruta de la imagen que servirá como portadora.
-* `--out` para indicar la ruta de la imagen de salida.
-* `--steg` para indicar el algoritmo de esteganografía a utilizar.
+### Parámetros Generales
 
-En el siguiente ejemplo se va a ocultar la imagen secreta `secret_img.bmp` en la imagen portadora `porter_img.bmp` con esteganografiado LSB1 y la imagen de salida que servirá como fachada para nuestros planes de destrucción será `facade_img.bmp`.
+| Parámetro       | Descripción                                                                                     |
+|-----------------|-------------------------------------------------------------------------------------------------|
+| `--embed`       | Modo de ocultación                                                                              |
+| `--extract`     | Modo de extracción                                                                              |
+| `--in`          | Archivo de información a ocultar                                                                |
+| `-p`           | Imagen portadora (archivo BMP donde se esconde o extrae la información)                         |
+| `--out`         | Archivo de imagen o archivo de salida                                                           |
+| `--steg`        | Algoritmo de esteganografía (`<steganography_method>`: LSB1, LSB4, LSBI)                        |
+| `-a`           | Algoritmo de cifrado (`<encryption_method>`: AES128, AES192, AES256, 3DES)                      |
+| `-m`           | Modo de operación de cifrado (`<mode>`: ECB, CBC, CFB, OFB)                                     |
+| `--pass`        | Contraseña de cifrado (`<password>`)                                                            |
 
-```sh {"id":"01JA3VH2E57SH82R7WBAG1AJ72"}
-./stegobmp --embed --in ./tests/secret_img.bmp  --p ./tests/porter_img.bmp  --out ./tests/facade_img.bmp --steg LSB1
+### Ejemplos de Uso
+
+
+#### Embedding
+
+##### Con cifrado
+
+```sh
+./stegobmp --embed --in <path/to/message.txt> -p <path/to/cover_image.bmp> --out <path/to/stego_image.bmp> --steg <steganography_method>
 ```
 
-### Ocultar información en una imagen BMP con cifrado
+##### Sin cifrado
 
-Se debe indicar como primer argumento `--embed` para indicar que se va a ocultar información en una imagen BMP. Los siguientes argumentos pueden variar su orden:
-* `--in` para indicar la ruta de la imagen que se va a ocultar.
-* `--p` para indicar la ruta de la imagen que servirá como portadora.
-* `--out` para indicar la ruta de la imagen de salida.
-* `--steg` para indicar el algoritmo de esteganografía a utilizar.
-* `--a` para indicar el algoritmo de cifrado simétrico a utilizar.
-* `--m` para indicar el modo de operación del cifrado.
-* `--pass` para indicar la contraseña del cifrado.
-
-En el siguiente ejemplo se va a ocultar la imagen secreta `secret_img.bmp` en la imagen portadora `porter_img.bmp` con esteganografiado LSB1 y cifrado 3DES con modo de operación CBC y la imagen de salida que servirá como fachada para nuestros planes de destrucción será `facade_img.bmp`.
-
-```sh {"id":"01JA3VH3QZQZQZQZQZQZQZQZQZ"}
-./stegobmp --embed --in ./tests/secret_img.bmp  --p ./tests/porter_img.bmp  --out ./tests/facade_img.bmp --steg LSB1 --a 3des --m cbc --pass "secretpassword"
+```sh
+./stegobmp --embed --in <path/to/secret_data.txt> -p <path/to/cover_image.bmp> --out <path/to/stego_image_encrypted.bmp> --steg <steganography_method> -a <encryption_method> -m <mode> --pass "<password>"
 ```
 
-### Extraer información de una imagen BMP sin cifrado
+#### Extracción
 
-Se debe indicar como primer argumento `--extract` para indicar que se va a extraer información de una imagen BMP. Los siguientes argumentos pueden variar su orden:
-* `--p` para indicar la ruta de la imagen que se va a extraer la información.
-* `--out` para indicar la ruta del archivo de salida.
-* `--steg` para indicar el algoritmo de esteganografía a utilizar.
-
-En el siguiente ejemplo se va a extraer la información oculta en la imagen `facade_img.bmp` con esteganografía LSB1 y se va a guardar en el archivo `secret_img.bmp`.
-
-```sh {"id":"01JA3VH4QZQZQZQZQZQZQZQZQZ"}
-./stegobmp --extract --p ./tests/facade_img.bmp --out ./tests/secret_img.bmp --steg LSB1
+##### Con cifrado
+```sh
+./stegobmp --extract -p <path/to/stego_image.bmp> --out <path/to/recovered_message.txt> --steg <steganography_method>
 ```
+##### Sin cifrado
 
-### Extraer información de una imagen BMP con cifrado
 
-Se debe indicar como primer argumento `--extract` para indicar que se va a extraer información de una imagen BMP. Los siguientes argumentos pueden variar su orden:
-* `--p` para indicar la ruta de la imagen que se va a extraer la información.
-* `--out` para indicar la ruta del archivo de salida.
-* `--steg` para indicar el algoritmo de esteganografía a utilizar.
-* `--a` para indicar el algoritmo de cifrado simétrico a utilizar.
-* `--m` para indicar el modo de operación del cifrado.
-* `--pass` para indicar la contraseña del cifrado.
-
-En el siguiente ejemplo se va a extraer la información oculta en la imagen `facade_img.bmp` con esteganografía LSB1 y cifrado 3DES con modo de operación CBC y se va a guardar en el archivo `secret_img.bmp`.
-
-```sh {"id":"01JA3VH5QZQZQZQZQZQZQZQZQZ"}
-./stegobmp --extract --p ./tests/facade_img.bmp --out ./tests/secret_img.bmp --steg LSB1 --a 3des --m cbc --pass "secretpassword"
+```sh
+./stegobmp --extract -p <path/to/stego_image_encrypted.bmp> --out <path/to/recovered_secret_data.txt> --steg <steganography_method> -a <encryption_method> -m <mode> --pass "<password>"
 ```
-
-## Operaciones soportadas
-
-### Esteganografía
-* LSB1
-* LSB4
-* LSBI
-
-### Cifrado
-* AES128
-* AES192
-* AES256
-* 3DES
-
-### Modos de operación
-* ECB
-* CBC
-* CFB
-* OFB
