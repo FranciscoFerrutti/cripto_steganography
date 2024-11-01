@@ -115,8 +115,4 @@ Para el caso de LSB1 y cifrado 3DES con modo CBC:
 
 ## Stegoanalysis
 
-```sh
-
-```
-
 Para ver cómo se ejecuta el paso a paso para encontrar el secreto tras las imágenes de [este directorio](./assets/grupo9/), ver el README de [./stegoanalysis](./stegoanalysis).

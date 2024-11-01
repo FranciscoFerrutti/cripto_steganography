@@ -2,23 +2,23 @@
 
 #define HELP_MSG \
     "\nUsage for concealment: \n\t\
-stegobmp -embed -in <file> -p <bitmapfile> -out <bitmapfile> -steg <LSB1 | LSB4 | LSBI>\n\n\
+stegobmp --embed --in <file> --p <bitmapfile> --out <bitmapfile> --steg <LSB1 | LSB4 | LSBI>\n\n\
 \nConcealment command parameters:\n\
--embed: option for concealment\n\
--in <file>: indicates the file to conceal\n\
--p <bitmapfile>: carrier bmp file\n\
--out <bitmapfile>: bmp output file with embedded information\n\
--steg <LSB1 | LSB4 | LSBI>: steganography algorithm. \n\tOptions are: LSB (1bit), LSB (4 bits), LSB (Enhanced)\n\
-\nConcealment optional parameters:\n\
--a <aes128 | aes192 | aes256 | 3des>\n\
--m <ecb | cfb | ofb | cbc>\n\
--pass password: encryption password\n\
-\n\n\nUsage for extraction:\n\
-stegobmp -extract -p <bitmapfile> -out <file> -steg <LSB1 | LSB4 | LSBI> -a <aes128 | aes192 | aes256 | 3des> -m <ecb | cfb | ofb | cbc> -pass <password>\n\
+--embed: option for concealment\n\
+--in <file>: indicates the file to conceal\n\
+--p <bitmapfile>: carrier bmp file\n\
+--out <bitmapfile>: bmp output file with embedded information\n\
+--steg <LSB1 | LSB4 | LSBI>: steganography algorithm. \n\tOptions are: LSB (1bit), LSB (4 bits), LSB (Enhanced)\n\
+\nUsage for extraction:\n\t\
+stegobmp --extract --p <bitmapfile> --out <file> --steg <LSB1 | LSB4 | LSBI> --a <aes128 | aes192 | aes256 | 3des> --m <ecb | cfb | ofb | cbc> --pass <password>\n\
 \nExtraction command parameters:\n\
--extract: option for extraction from bmp file\n\
--p <bitmapfile>: bmp carrier file\n\
--out <file>: file to be overwritten with output\n"
+--extract: option for extraction from bmp file\n\
+--p <bitmapfile>: bmp carrier file\n\
+--out <file>: file to be overwritten with output\n\
+\nOptional parameters:\n\
+--a <aes128 | aes192 | aes256 | 3des>\n\
+--m <ecb | cfb | ofb | cbc>\n\
+--pass password: encryption password\n"
 
 void print_help() {
     printf("%s\n", HELP_MSG);
