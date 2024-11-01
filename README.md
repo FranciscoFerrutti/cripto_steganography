@@ -1,6 +1,6 @@
 # Índice
 
-1. [Cripto_Steganography](#cripto_steganography)
+1. [Ocultamiento y Encripción de Datos en Imágenes BMP mediante Esteganografía](#ocultamiento-y-encripción-de-datos-en-imágenes-bmp-mediante-esteganografía)
 2. [Compilación](#compilación)
 3. [Ejemplos de Uso](#ejemplos-de-uso)
    - [Parámetros Generales](#parámetros-generales)
