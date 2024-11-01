@@ -10,6 +10,7 @@
    - [Extraction](#extraction)
      - [Con cifrado](#con-cifrado-1)
      - [Sin cifrado](#sin-cifrado-1)
+4. [Stegoanalysis](#stegoanalysis)
 
 # Cripto_Steganography
 
@@ -17,7 +18,7 @@
 
 ## Compilación
 
-Para compilar el proyecto, necesitas GCC y `make`. En el directorio raíz del proyecto, ejecutar:
+Para compilar el proyecto, es necesario GCC y `make`. En el directorio raíz del proyecto, ejecutar:
 
 ```sh
 make all
@@ -70,3 +71,7 @@ Esto genera un ejecutable `stegobmp`, ver los ejemplos de uso.
 ```sh
 ./stegobmp --extract -p <path/to/stego_image_encrypted.bmp> --out <path/to/recovered_secret_data.txt> --steg <steganography_method> -a <encryption_method> -m <mode> --pass "<password>"
 ```
+
+## Stegoanalysis
+
+Para ver cómo se ejecuta el paso a paso para encontrar el secreto tras las imágenes en [este directorio](./assets/grupo9/), ver el README de [./stegoanalysis](./stegoanalysis).
